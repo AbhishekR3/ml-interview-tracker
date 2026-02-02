@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Topics - ML Interview Prep Tracker</title>
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="header-content">
+      <h1>ML Interview Prep Tracker</h1>
+      <nav>
+        <ul>
+          <li><a href="index.html">Dashboard</a></li>
+          <li><a href="log.html">Daily Log</a></li>
+          <li><a href="topics.html" class="active">Topics</a></li>
+          <li><a href="applications.html">Applications</a></li>
+          <li><a href="analytics.html">Analytics</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="container">
+    <!-- Coverage Summary -->
+    <div class="card">
+      <h2>Topic Coverage Summary</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-value" id="totalTopics">0</span>
+          <span class="stat-label">Total Topics</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value text-success" id="practicedTopics">0</span>
+          <span class="stat-label">Practiced at Least Once</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value" id="coveragePercent">0%</span>
+          <span class="stat-label">Coverage</span>
+        </div>
+      </div>
+
+      <div class="progress-bar">
+        <div class="progress-fill" id="coverageProgress" style="width: 0%;"></div>
+      </div>
+
+      <div class="stats-grid mt-3">
+        <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+          <span class="stat-value" style="color: white;" id="greenCount">0</span>
+          <span class="stat-label" style="color: white;">Recent (< 7 days)</span>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+          <span class="stat-value" style="color: white;" id="yellowCount">0</span>
+          <span class="stat-label" style="color: white;">Needs Attention (8-14 days)</span>
+        </div>
+        <div class="stat-card" style="background: linear-gradient(135deg, #f43f5e, #e11d48);">
+          <span class="stat-value" style="color: white;" id="redCount">0</span>
+          <span class="stat-label" style="color: white;">Stale (15+ days or never)</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sort Options -->
+    <div class="card">
+      <h3>Sort By</h3>
+      <div class="btn-group">
+        <button class="btn btn-small" onclick="sortTopics('alphabetical')">Alphabetical</button>
+        <button class="btn btn-small" onclick="sortTopics('leastPracticed')">Least Practiced</button>
+        <button class="btn btn-small" onclick="sortTopics('oldestPracticed')">Oldest Practiced</button>
+        <button class="btn btn-small btn-secondary" onclick="sortTopics('category')">By Category (Default)</button>
+      </div>
+      <p class="text-muted mt-2" style="font-size: 0.875rem;">
+        <span class="status-dot status-green"></span> Practiced in last 7 days &nbsp;&nbsp;
+        <span class="status-dot status-yellow"></span> Practiced 8-14 days ago &nbsp;&nbsp;
+        <span class="status-dot status-red"></span> Practiced 15+ days ago or never
+      </p>
+    </div>
+
+    <!-- Topic List -->
+    <div id="topicsList"></div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>ML Interview Prep Tracker v1.0</p>
+  </footer>
+
+  <script src="./js/app.js"></script>
+  <script src="./js/topics.js"></script>
+</body>
+</html>

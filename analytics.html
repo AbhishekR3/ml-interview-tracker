@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics - ML Interview Prep Tracker</title>
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="header-content">
+      <h1>ML Interview Prep Tracker</h1>
+      <nav>
+        <ul>
+          <li><a href="index.html">Dashboard</a></li>
+          <li><a href="log.html">Daily Log</a></li>
+          <li><a href="topics.html">Topics</a></li>
+          <li><a href="applications.html">Applications</a></li>
+          <li><a href="analytics.html" class="active">Analytics</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="container">
+    <!-- Time Period Selector -->
+    <div class="card">
+      <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+        <button class="btn btn-small" id="period7" onclick="setPeriod(7)">Last 7 Days</button>
+        <button class="btn btn-small" id="period30" onclick="setPeriod(30)">Last 30 Days</button>
+        <button class="btn btn-small" id="periodAll" onclick="setPeriod(0)">All Time</button>
+      </div>
+    </div>
+
+    <!-- Streak Info -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-value" id="currentStreak">0</span>
+        <span class="stat-label">Current Streak</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="longestStreak">0</span>
+        <span class="stat-label">Longest Streak</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="totalDays">0</span>
+        <span class="stat-label">Days Logged</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="avgDaily">0h</span>
+        <span class="stat-label">Avg Daily Time</span>
+      </div>
+    </div>
+
+    <!-- Burnout Prevention Insights -->
+    <div id="burnoutInsights"></div>
+
+    <!-- Practice Trends Chart -->
+    <div class="card">
+      <h2>Practice Time Trends</h2>
+      <p class="text-muted mb-2">Daily practice time (minutes) - Red line indicates 2-hour daily goal</p>
+      <div class="chart-container">
+        <div id="practiceChart"></div>
+      </div>
+    </div>
+
+    <!-- Topic Coverage Heatmap -->
+    <div class="card">
+      <h2>Topic Coverage by Category</h2>
+      <p class="text-muted mb-2">Color intensity shows practice frequency</p>
+      <div id="topicHeatmap"></div>
+    </div>
+
+    <!-- Weekly Patterns -->
+    <div class="card">
+      <h2>Weekly Activity Patterns</h2>
+      <p class="text-muted mb-2">Which days of the week are you most active?</p>
+      <div class="chart-container">
+        <div id="weeklyPatterns"></div>
+      </div>
+    </div>
+
+    <!-- Resource Distribution -->
+    <div class="card">
+      <h2>Resource Distribution</h2>
+      <p class="text-muted mb-2">Questions answered by resource</p>
+      <div class="chart-container">
+        <div id="resourceChart"></div>
+      </div>
+    </div>
+
+    <!-- Streak Calendar -->
+    <div class="card">
+      <h2>Practice Calendar</h2>
+      <p class="text-muted mb-2">Visual history of your practice days</p>
+      <div id="streakCalendar"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>ML Interview Prep Tracker v1.0</p>
+  </footer>
+
+  <script src="./js/app.js"></script>
+  <script src="./js/analytics.js"></script>
+</body>
+</html>

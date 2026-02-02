@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Applications - ML Interview Prep Tracker</title>
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="header-content">
+      <h1>ML Interview Prep Tracker</h1>
+      <nav>
+        <ul>
+          <li><a href="index.html">Dashboard</a></li>
+          <li><a href="log.html">Daily Log</a></li>
+          <li><a href="topics.html">Topics</a></li>
+          <li><a href="applications.html" class="active">Applications</a></li>
+          <li><a href="analytics.html">Analytics</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="container">
+    <!-- Summary Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <span class="stat-value" id="totalApps">0</span>
+        <span class="stat-label">Total Applications</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="appliedCount">0</span>
+        <span class="stat-label">Applied</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="interviewCount">0</span>
+        <span class="stat-label">In Interview</span>
+      </div>
+      <div class="stat-card">
+        <span class="stat-value" id="onsiteCount">0</span>
+        <span class="stat-label">Onsite</span>
+      </div>
+    </div>
+
+    <!-- Add Application Form -->
+    <div class="card">
+      <h2 id="formTitle">Add Application</h2>
+      <form id="appForm">
+        <input type="hidden" id="editAppId" value="">
+
+        <div class="form-group">
+          <label for="company">Company *</label>
+          <input type="text" id="company" required>
+        </div>
+
+        <div class="form-group">
+          <label for="jobTitle">Job Title *</label>
+          <input type="text" id="jobTitle" required>
+        </div>
+
+        <div class="form-group">
+          <label for="link">Application Link *</label>
+          <input type="url" id="link" placeholder="https://" required>
+        </div>
+
+        <div class="form-group">
+          <label for="dateApplied">Date Applied</label>
+          <input type="date" id="dateApplied" required>
+        </div>
+
+        <div class="form-group">
+          <label for="status">Status</label>
+          <select id="status" required>
+            <option value="Applied">Applied</option>
+            <option value="Phone Screen">Phone Screen</option>
+            <option value="Technical Interview">Technical Interview</option>
+            <option value="Onsite">Onsite</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="appNotes">Notes (optional, max 500 characters)</label>
+          <textarea id="appNotes" maxlength="500" placeholder="Any notes about this application..."></textarea>
+          <div style="text-align: right; font-size: 0.875rem; color: var(--gray-600);">
+            <span id="appCharCount">0</span> / 500
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button type="submit" class="btn">Save Application</button>
+          <button type="button" class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Filter & Sort -->
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+        <div>
+          <label for="statusFilter" style="margin-right: 8px;">Filter by Status:</label>
+          <select id="statusFilter" onchange="filterApplications()">
+            <option value="all">All Applications</option>
+            <option value="Applied">Applied</option>
+            <option value="Phone Screen">Phone Screen</option>
+            <option value="Technical Interview">Technical Interview</option>
+            <option value="Onsite">Onsite</option>
+          </select>
+        </div>
+        <div>
+          <label for="sortBy" style="margin-right: 8px;">Sort by:</label>
+          <select id="sortBy" onchange="sortApplications()">
+            <option value="dateDesc">Date Applied (Newest First)</option>
+            <option value="dateAsc">Date Applied (Oldest First)</option>
+            <option value="company">Company Name</option>
+            <option value="status">Status</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Applications Table -->
+    <div class="card">
+      <h2>Your Applications</h2>
+      <p class="text-muted mb-2" style="font-size: 0.875rem;">
+        <span style="background: rgba(245, 158, 11, 0.2); padding: 2px 8px; border-radius: 4px;">Orange highlight</span> = No status change in 14+ days
+      </p>
+      <div style="overflow-x: auto;">
+        <table id="applicationsTable">
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Job Title</th>
+              <th>Date Applied</th>
+              <th>Status</th>
+              <th>Last Updated</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="applicationsBody">
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>ML Interview Prep Tracker v1.0</p>
+  </footer>
+
+  <script src="./js/app.js"></script>
+  <script src="./js/applications.js"></script>
+</body>
+</html>

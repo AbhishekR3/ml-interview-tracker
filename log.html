@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Log - ML Interview Prep Tracker</title>
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="header-content">
+      <h1>ML Interview Prep Tracker</h1>
+      <nav>
+        <ul>
+          <li><a href="index.html">Dashboard</a></li>
+          <li><a href="log.html" class="active">Daily Log</a></li>
+          <li><a href="topics.html">Topics</a></li>
+          <li><a href="applications.html">Applications</a></li>
+          <li><a href="analytics.html">Analytics</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="container">
+    <!-- Entry Form -->
+    <div class="card">
+      <h2 id="formTitle">Log Practice Session</h2>
+      <form id="logForm">
+        <input type="hidden" id="editLogId" value="">
+
+        <div class="form-group">
+          <label for="logDate">Date</label>
+          <input type="date" id="logDate" required>
+        </div>
+
+        <div class="form-group">
+          <label for="minutesSpent">Time Spent</label>
+          <div class="btn-group mb-2">
+            <button type="button" class="btn btn-small" onclick="setMinutes(30)">30 min</button>
+            <button type="button" class="btn btn-small" onclick="setMinutes(60)">60 min</button>
+            <button type="button" class="btn btn-small" onclick="setMinutes(90)">90 min</button>
+            <button type="button" class="btn btn-small" onclick="setMinutes(120)">120 min</button>
+          </div>
+          <input type="number" id="minutesSpent" min="1" placeholder="Minutes" required>
+        </div>
+
+        <div class="form-group">
+          <label>Resources & Question Counts</label>
+          <div class="checkbox-group">
+            <div class="checkbox-item">
+              <input type="checkbox" id="useInterviewPrepPDF" onchange="toggleResource('interviewPrepPDF')">
+              <label for="useInterviewPrepPDF" style="margin: 0;">Interview Prep PDF</label>
+              <input type="number" id="interviewPrepPDF" min="0" value="0" placeholder="0" disabled>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="useStratascratch" onchange="toggleResource('stratascratch')">
+              <label for="useStratascratch" style="margin: 0;">Stratascratch</label>
+              <input type="number" id="stratascratch" min="0" value="0" placeholder="0" disabled>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="useHackerrank" onchange="toggleResource('hackerrank')">
+              <label for="useHackerrank" style="margin: 0;">HackerRank</label>
+              <input type="number" id="hackerrank" min="0" value="0" placeholder="0" disabled>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="useLeetcode" onchange="toggleResource('leetcode')">
+              <label for="useLeetcode" style="margin: 0;">LeetCode</label>
+              <input type="number" id="leetcode" min="0" value="0" placeholder="0" disabled>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="useTryexponent" onchange="toggleResource('tryexponent')">
+              <label for="useTryexponent" style="margin: 0;">TryExponent</label>
+              <input type="number" id="tryexponent" min="0" value="0" placeholder="0" disabled>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="useClaudeQA" onchange="toggleResource('claudeQA')">
+              <label for="useClaudeQA" style="margin: 0;">Claude Q&A</label>
+              <input type="number" id="claudeQA" min="0" value="0" placeholder="0" disabled>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label for="topicSelect">Topics Covered (select multiple)</label>
+          <input type="text" id="topicSearch" placeholder="Search topics..." style="margin-bottom: 8px;">
+          <select id="topicSelect" multiple size="15" style="font-size: 0.95rem;"></select>
+          <p class="text-muted" style="font-size: 0.875rem; margin-top: 4px;">
+            💡 Tip: Hold Ctrl/Cmd to select multiple topics. Use search box to filter topics quickly.
+          </p>
+          <div id="selectedTopicsDisplay" style="margin-top: 8px; font-size: 0.875rem;"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="notes">Notes (optional, max 200 characters)</label>
+          <textarea id="notes" maxlength="200" placeholder="Any additional notes about this session..."></textarea>
+          <div style="text-align: right; font-size: 0.875rem; color: var(--gray-600);">
+            <span id="charCount">0</span> / 200
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button type="submit" class="btn">Save Log</button>
+          <button type="button" class="btn btn-secondary" onclick="cancelEdit()">Cancel</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Log History -->
+    <div class="card">
+      <h2>Practice History (Last 30 Days)</h2>
+      <div id="logHistory"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>ML Interview Prep Tracker v1.0</p>
+  </footer>
+
+  <script src="./js/app.js"></script>
+  <script src="./js/log.js"></script>
+</body>
+</html>
