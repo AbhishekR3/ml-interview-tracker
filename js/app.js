@@ -485,4 +485,9 @@ function setActiveNav(pageName) {
 // Initialize data on page load
 document.addEventListener('DOMContentLoaded', async () => {
   await data.init();
+
+  // Initialize GitHub sync if configured
+  if (typeof githubSync !== 'undefined') {
+    await githubSync.init();
+  }
 });

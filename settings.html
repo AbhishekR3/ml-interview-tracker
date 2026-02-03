@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ML Interview Prep Tracker - Settings</title>
+  <link rel="stylesheet" href="./css/styles.css">
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="header-content">
+      <h1>ML Interview Prep Tracker</h1>
+      <div class="header-right">
+        <div id="syncIndicator" class="sync-indicator" onclick="githubSync.manualSync()">
+          <span class="sync-icon">○</span>
+          <span class="sync-text"></span>
+        </div>
+        <nav>
+          <ul>
+            <li><a href="index.html">Dashboard</a></li>
+            <li><a href="log.html">Daily Log</a></li>
+            <li><a href="topics.html">Topics</a></li>
+            <li><a href="applications.html">Applications</a></li>
+            <li><a href="analytics.html">Analytics</a></li>
+            <li><a href="settings.html" class="active">Settings</a></li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <div class="container">
+    <h2 class="page-title">Settings</h2>
+
+    <!-- GitHub Sync Settings -->
+    <div class="card">
+      <h2>GitHub Sync</h2>
+      <p class="text-muted mb-2">Sync your data across devices using GitHub as storage.</p>
+
+      <div class="sync-status-card" id="syncStatusCard">
+        <div class="sync-status-icon" id="syncStatusIcon">○</div>
+        <div class="sync-status-details">
+          <div class="sync-status-label" id="syncStatusLabel">Not Configured</div>
+          <div class="sync-status-message" id="syncStatusMessage">Enter your GitHub token to enable sync</div>
+        </div>
+      </div>
+
+      <form id="syncSettingsForm" onsubmit="return saveSyncSettings(event)">
+        <div class="form-group">
+          <label for="githubToken">GitHub Personal Access Token</label>
+          <div class="input-with-action">
+            <input type="password" id="githubToken" name="githubToken" placeholder="ghp_xxxxxxxxxxxx">
+            <button type="button" class="btn btn-small btn-secondary" onclick="toggleTokenVisibility()">Show</button>
+          </div>
+          <small class="form-help">
+            Create a <a href="https://github.com/settings/tokens?type=beta" target="_blank">fine-grained token</a>
+            with "Contents: Read and write" permission for this repo only.
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="githubRepo">Repository (owner/repo)</label>
+          <input type="text" id="githubRepo" name="githubRepo" placeholder="abhishekramesh/ml-interview-tracker">
+          <small class="form-help">The repository where your data will be stored.</small>
+        </div>
+
+        <div class="btn-group">
+          <button type="submit" class="btn">Save & Sync</button>
+          <button type="button" class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
+          <button type="button" class="btn btn-danger" onclick="clearSyncSettings()">Clear Token</button>
+        </div>
+      </form>
+
+      <div id="connectionTestResult" class="connection-test-result hidden"></div>
+    </div>
+
+    <!-- Goals Settings -->
+    <div class="card">
+      <h2>Goals</h2>
+      <form id="goalsForm" onsubmit="return saveGoals(event)">
+        <div class="form-group">
+          <label for="weeklyGoalHours">Weekly Goal (hours)</label>
+          <input type="number" id="weeklyGoalHours" name="weeklyGoalHours" min="1" max="100" value="14">
+        </div>
+
+        <div class="form-group">
+          <label for="dailyGoalMinutes">Daily Goal (minutes)</label>
+          <input type="number" id="dailyGoalMinutes" name="dailyGoalMinutes" min="15" max="480" value="120">
+        </div>
+
+        <div class="form-group">
+          <label for="targetDate">Milestone Date (optional)</label>
+          <input type="date" id="targetDate" name="targetDate">
+          <small class="form-help">Set a target date for your job search milestone.</small>
+        </div>
+
+        <button type="submit" class="btn">Save Goals</button>
+      </form>
+    </div>
+
+    <!-- Data Management -->
+    <div class="card">
+      <h2>Data Management</h2>
+
+      <div class="data-actions">
+        <div class="data-action-item">
+          <h3>Export Data</h3>
+          <p class="text-muted">Download all your data as a JSON file.</p>
+          <button class="btn btn-secondary" onclick="exportData()">Export</button>
+        </div>
+
+        <div class="data-action-item">
+          <h3>Import Data</h3>
+          <p class="text-muted">Import data from a JSON file.</p>
+          <input type="file" id="importFile" accept=".json" style="display: none" onchange="importData(event)">
+          <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">Import</button>
+        </div>
+
+        <div class="data-action-item danger">
+          <h3>Clear All Data</h3>
+          <p class="text-muted">Delete all local data. This cannot be undone.</p>
+          <button class="btn btn-danger" onclick="clearAllData()">Clear Data</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account -->
+    <div class="card">
+      <h2>Account</h2>
+      <button class="btn btn-secondary" onclick="auth.logout()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>ML Interview Prep Tracker v1.0</p>
+  </footer>
+
+  <script src="./js/app.js"></script>
+  <script src="./js/auth.js"></script>
+  <script src="./js/sync.js"></script>
+  <script>
+    // Check authentication
+    if (!auth.isAuthenticated()) {
+      window.location.href = 'login.html';
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', async () => {
+      await data.init();
+      loadSettings();
+      updateSyncStatus();
+    });
+
+    function loadSettings() {
+      // Load GitHub sync settings
+      const token = githubSync.getToken();
+      const repo = githubSync.getRepo();
+
+      if (token) {
+        document.getElementById('githubToken').value = token;
+      }
+      document.getElementById('githubRepo').value = repo;
+
+      // Load goals
+      const settings = data.getSettings();
+      document.getElementById('weeklyGoalHours').value = settings.weeklyGoalHours || 14;
+      document.getElementById('dailyGoalMinutes').value = settings.dailyGoalMinutes || 120;
+      document.getElementById('targetDate').value = settings.targetDate || '';
+    }
+
+    function updateSyncStatus() {
+      const statusCard = document.getElementById('syncStatusCard');
+      const icon = document.getElementById('syncStatusIcon');
+      const label = document.getElementById('syncStatusLabel');
+      const message = document.getElementById('syncStatusMessage');
+
+      if (githubSync.isConfigured()) {
+        statusCard.className = 'sync-status-card configured';
+        icon.textContent = '✓';
+        label.textContent = 'Configured';
+        message.textContent = 'Your data will sync automatically';
+        githubSync.updateSyncIndicator('success');
+      } else {
+        statusCard.className = 'sync-status-card not-configured';
+        icon.textContent = '○';
+        label.textContent = 'Not Configured';
+        message.textContent = 'Enter your GitHub token to enable sync';
+        githubSync.updateSyncIndicator('not-configured');
+      }
+    }
+
+    function toggleTokenVisibility() {
+      const input = document.getElementById('githubToken');
+      const btn = event.target;
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = 'Hide';
+      } else {
+        input.type = 'password';
+        btn.textContent = 'Show';
+      }
+    }
+
+    async function saveSyncSettings(event) {
+      event.preventDefault();
+
+      const token = document.getElementById('githubToken').value.trim();
+      const repo = document.getElementById('githubRepo').value.trim();
+
+      githubSync.setToken(token);
+      githubSync.setRepo(repo);
+
+      updateSyncStatus();
+
+      if (token) {
+        // Trigger initial sync
+        showToast('Syncing...');
+        const success = await githubSync.pull();
+        if (success) {
+          showToast('Sync settings saved and data synced!');
+        } else {
+          showToast('Settings saved but sync failed. Check your token.', 'error');
+        }
+      } else {
+        showToast('Sync disabled');
+      }
+
+      return false;
+    }
+
+    async function testConnection() {
+      const resultEl = document.getElementById('connectionTestResult');
+      resultEl.classList.remove('hidden', 'success', 'error');
+      resultEl.textContent = 'Testing connection...';
+
+      const token = document.getElementById('githubToken').value.trim();
+      const repo = document.getElementById('githubRepo').value.trim();
+
+      if (!token) {
+        resultEl.classList.add('error');
+        resultEl.textContent = 'Please enter a GitHub token first.';
+        return;
+      }
+
+      // Temporarily set token for test
+      const originalToken = githubSync.getToken();
+      const originalRepo = githubSync.getRepo();
+      githubSync.setToken(token);
+      githubSync.setRepo(repo);
+
+      try {
+        const response = await fetch(`https://api.github.com/repos/${repo}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Accept': 'application/vnd.github.v3+json'
+          }
+        });
+
+        if (response.ok) {
+          const repoInfo = await response.json();
+          resultEl.classList.add('success');
+          resultEl.textContent = `Connected to ${repoInfo.full_name}. Permissions OK.`;
+        } else if (response.status === 401) {
+          resultEl.classList.add('error');
+          resultEl.textContent = 'Invalid token. Please check your personal access token.';
+        } else if (response.status === 404) {
+          resultEl.classList.add('error');
+          resultEl.textContent = 'Repository not found. Check the owner/repo format.';
+        } else {
+          resultEl.classList.add('error');
+          resultEl.textContent = `Error: ${response.status} ${response.statusText}`;
+        }
+      } catch (error) {
+        resultEl.classList.add('error');
+        resultEl.textContent = `Connection error: ${error.message}`;
+      }
+
+      // Restore original settings if test only
+      githubSync.setToken(originalToken);
+      githubSync.setRepo(originalRepo);
+    }
+
+    function clearSyncSettings() {
+      if (confirm('Clear GitHub sync settings? Your data will remain in localStorage.')) {
+        githubSync.setToken(null);
+        document.getElementById('githubToken').value = '';
+        updateSyncStatus();
+        showToast('Sync settings cleared');
+      }
+    }
+
+    function saveGoals(event) {
+      event.preventDefault();
+
+      const settings = {
+        weeklyGoalHours: parseInt(document.getElementById('weeklyGoalHours').value) || 14,
+        dailyGoalMinutes: parseInt(document.getElementById('dailyGoalMinutes').value) || 120,
+        targetDate: document.getElementById('targetDate').value || null
+      };
+
+      data.updateSettings(settings);
+      showToast('Goals saved!');
+      return false;
+    }
+
+    function exportData() {
+      const exportData = {
+        dailyLogs: data.getDailyLogs(),
+        topics: data.getTopics(),
+        applications: data.getApplications(),
+        settings: data.getSettings(),
+        exportDate: new Date().toISOString()
+      };
+
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ml-tracker-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      showToast('Data exported!');
+    }
+
+    function importData(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const importedData = JSON.parse(e.target.result);
+
+          if (confirm('This will replace all your current data. Continue?')) {
+            if (importedData.dailyLogs) storage.set(STORAGE_KEYS.DAILY_LOGS, importedData.dailyLogs);
+            if (importedData.topics) storage.set(STORAGE_KEYS.TOPICS, importedData.topics);
+            if (importedData.applications) storage.set(STORAGE_KEYS.APPLICATIONS, importedData.applications);
+            if (importedData.settings) storage.set(STORAGE_KEYS.SETTINGS, importedData.settings);
+
+            showToast('Data imported successfully!');
+            loadSettings();
+          }
+        } catch (error) {
+          showToast('Invalid JSON file', 'error');
+        }
+      };
+      reader.readAsText(file);
+
+      // Reset file input
+      event.target.value = '';
+    }
+
+    function clearAllData() {
+      if (confirm('Are you sure you want to delete ALL your data? This cannot be undone.')) {
+        if (confirm('This will permanently delete all your practice logs, topics, applications, and settings. Are you REALLY sure?')) {
+          storage.clearAll();
+          showToast('All data cleared');
+          window.location.reload();
+        }
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      // Remove existing toast
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+
+      setTimeout(() => toast.classList.add('show'), 10);
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+  </script>
+</body>
+</html>

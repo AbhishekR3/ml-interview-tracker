@@ -11,15 +11,22 @@
   <header>
     <div class="header-content">
       <h1>ML Interview Prep Tracker</h1>
-      <nav>
-        <ul>
-          <li><a href="index.html">Dashboard</a></li>
-          <li><a href="log.html">Daily Log</a></li>
-          <li><a href="topics.html" class="active">Topics</a></li>
-          <li><a href="applications.html">Applications</a></li>
-          <li><a href="analytics.html">Analytics</a></li>
-        </ul>
-      </nav>
+      <div class="header-right">
+        <div id="syncIndicator" class="sync-indicator" onclick="githubSync.manualSync()">
+          <span class="sync-icon">○</span>
+          <span class="sync-text"></span>
+        </div>
+        <nav>
+          <ul>
+            <li><a href="index.html">Dashboard</a></li>
+            <li><a href="log.html">Daily Log</a></li>
+            <li><a href="topics.html" class="active">Topics</a></li>
+            <li><a href="applications.html">Applications</a></li>
+            <li><a href="analytics.html">Analytics</a></li>
+            <li><a href="settings.html">Settings</a></li>
+          </ul>
+        </nav>
+      </div>
     </div>
   </header>
 
@@ -88,7 +95,15 @@
     <p>ML Interview Prep Tracker v1.0</p>
   </footer>
 
+  <script src="./js/auth.js"></script>
+  <script>
+    // Check authentication
+    if (!auth.isAuthenticated()) {
+      window.location.href = 'login.html';
+    }
+  </script>
   <script src="./js/app.js"></script>
+  <script src="./js/sync.js"></script>
   <script src="./js/topics.js"></script>
 </body>
 </html>
