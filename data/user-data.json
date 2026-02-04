@@ -910,8 +910,8 @@
   "applications": [],
   "settings": {
     "targetDate": null,
-    "weeklyGoalHours": 14,
-    "dailyGoalMinutes": 120
+    "weeklyGoalHours": 5,
+    "dailyGoalMinutes": 30
   },
-  "lastModified": "2026-02-04T01:29:32.142Z"
+  "lastModified": "2026-02-04T01:29:49.581Z"
 }
