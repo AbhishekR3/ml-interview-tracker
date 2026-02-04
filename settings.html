@@ -61,6 +61,12 @@
           <small class="text-muted">Found in Project Settings > API > anon public key</small>
         </div>
 
+        <div class="form-group">
+          <label for="supabaseUserId">User ID</label>
+          <input type="text" id="supabaseUserId" placeholder="user_1234567890_abc123">
+          <small class="text-muted">Unique identifier for your data row in Supabase. This ID links to your row in the user_data table.</small>
+        </div>
+
         <div id="connectionTestResult" class="connection-result hidden"></div>
 
         <div class="btn-group" style="margin-top: 16px;">
@@ -169,9 +175,11 @@
       // Load Supabase settings
       const url = supabaseSync.getUrl();
       const key = supabaseSync.getKey();
+      const userId = supabaseSync.getStoredUserId();
 
       if (url) document.getElementById('supabaseUrl').value = url;
       if (key) document.getElementById('supabaseKey').value = key;
+      if (userId) document.getElementById('supabaseUserId').value = userId;
 
       // Load goals
       const settings = data.getSettings();
@@ -217,14 +225,21 @@
 
       const url = document.getElementById('supabaseUrl').value.trim();
       const key = document.getElementById('supabaseKey').value.trim();
+      const userId = document.getElementById('supabaseUserId').value.trim();
 
       if (!url || !key) {
         showToast('Please enter both URL and key', 'error');
         return false;
       }
 
+      if (!userId) {
+        showToast('Please enter a User ID', 'error');
+        return false;
+      }
+
       supabaseSync.setUrl(url);
       supabaseSync.setKey(key);
+      supabaseSync.setStoredUserId(userId);
 
       updateSyncStatus();
 
@@ -278,8 +293,10 @@
       if (confirm('Disable cloud sync? Your data will remain stored locally.')) {
         supabaseSync.setUrl(null);
         supabaseSync.setKey(null);
+        supabaseSync.setStoredUserId(null);
         document.getElementById('supabaseUrl').value = '';
         document.getElementById('supabaseKey').value = '';
+        document.getElementById('supabaseUserId').value = '';
         updateSyncStatus();
         showToast('Cloud sync disabled');
       }

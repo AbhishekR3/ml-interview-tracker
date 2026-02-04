@@ -4,6 +4,7 @@ const supabaseSync = {
   // Configuration
   STORAGE_KEY_URL: 'mltracker_supabase_url',
   STORAGE_KEY_KEY: 'mltracker_supabase_key',
+  STORAGE_KEY_USER_ID: 'mltracker_supabase_user_id',
   TABLE_NAME: 'user_data',
   DEBOUNCE_MS: 2000,
 
@@ -45,9 +46,24 @@ const supabaseSync = {
     this._client = null; // Reset client
   },
 
+  // Get stored user ID from localStorage
+  getStoredUserId() {
+    return localStorage.getItem(this.STORAGE_KEY_USER_ID);
+  },
+
+  // Set stored user ID
+  setStoredUserId(userId) {
+    if (userId) {
+      localStorage.setItem(this.STORAGE_KEY_USER_ID, userId);
+    } else {
+      localStorage.removeItem(this.STORAGE_KEY_USER_ID);
+    }
+    this._userId = null; // Reset cached user ID
+  },
+
   // Check if sync is configured
   isConfigured() {
-    return !!(this.getUrl() && this.getKey());
+    return !!(this.getUrl() && this.getKey() && this.getStoredUserId());
   },
 
   // Get or create Supabase client
@@ -69,27 +85,19 @@ const supabaseSync = {
     return null;
   },
 
-  // Get user ID (using auth user email as identifier)
+  // Get user ID (using stored user ID from settings)
   getUserId() {
     if (this._userId) return this._userId;
 
-    // Use the auth module's user email as unique identifier
-    if (typeof auth !== 'undefined' && auth.getUser) {
-      const user = auth.getUser();
-      if (user && user.email) {
-        this._userId = user.email;
-        return this._userId;
-      }
+    // Use the stored user ID from settings (required)
+    const storedUserId = this.getStoredUserId();
+    if (storedUserId) {
+      this._userId = storedUserId;
+      return this._userId;
     }
 
-    // Fallback to a generated ID stored in localStorage
-    let id = localStorage.getItem('mltracker_user_id');
-    if (!id) {
-      id = 'user_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('mltracker_user_id', id);
-    }
-    this._userId = id;
-    return this._userId;
+    // No user ID configured
+    return null;
   },
 
   // Update sync status indicator in UI
