@@ -25,7 +25,6 @@ function setPeriod(days) {
 function loadAnalytics() {
   loadStreakStats();
   loadBurnoutInsights();
-  loadPracticeChart();
   loadTopicHeatmap();
   loadWeeklyPatterns();
   loadResourceChart();
@@ -330,60 +329,95 @@ function loadResourceChart() {
 function loadStreakCalendar() {
   const container = document.getElementById('streakCalendar');
   const logs = data.getDailyLogs();
-
-  if (logs.length === 0) {
-    container.innerHTML = '<p class="text-muted">No practice data to display.</p>';
-    return;
-  }
-
-  // Get date range
-  const sortedLogs = logs.sort((a, b) => a.date.localeCompare(b.date));
-  const firstDateString = sortedLogs[0].date;
   const todayString = utils.getTodayDate();
 
-  // Create set of logged dates
-  const loggedDates = new Set(logs.map(log => log.date));
+  // Create a map of date -> total minutes practiced
+  const dateMinutes = {};
+  logs.forEach(log => {
+    if (!dateMinutes[log.date]) {
+      dateMinutes[log.date] = 0;
+    }
+    dateMinutes[log.date] += log.minutesSpent || 0;
+  });
 
-  // Build calendar grid
-  let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(30px, 1fr)); gap: 4px; max-width: 800px;">';
-
-  // Use string comparison to iterate through dates
-  let currentDateString = firstDateString;
-  let iterations = 0;
-  const maxIterations = 365; // Safety limit
-
-  while (currentDateString <= todayString && iterations < maxIterations) {
-    const hasLog = loggedDates.has(currentDateString);
-
-    const bgColor = hasLog ? 'var(--success)' : 'var(--gray-200)';
-    const title = `${currentDateString}${hasLog ? ' ✓' : ''}`;
-
-    html += `
-      <div style="width: 30px; height: 30px; background: ${bgColor}; border-radius: 4px; cursor: help;" title="${title}"></div>
-    `;
-
-    // Increment date by 1 day using PST timezone
-    const parts = currentDateString.split('-');
-    const year = parseInt(parts[0]);
-    const month = parseInt(parts[1]) - 1;
-    const day = parseInt(parts[2]);
-    const nextDate = new Date(year, month, day);
-    nextDate.setDate(nextDate.getDate() + 1);
-
-    const nextYear = nextDate.getFullYear();
-    const nextMonth = String(nextDate.getMonth() + 1).padStart(2, '0');
-    const nextDay = String(nextDate.getDate()).padStart(2, '0');
-    currentDateString = `${nextYear}-${nextMonth}-${nextDay}`;
-
-    iterations++;
+  // Get color based on practice intensity
+  function getColor(minutes) {
+    if (minutes === 0) return 'var(--calendar-empty)';
+    if (minutes < 60) return 'var(--calendar-light)'; // Light green (< 1 hour)
+    if (minutes < 120) return 'var(--calendar-medium)'; // Medium green (1-2 hours)
+    return 'var(--calendar-dark)'; // Dark green (2+ hours)
   }
 
+  // Calculate start date (27 days ago, so 28 days total including today)
+  const today = new Date(todayString + 'T12:00:00');
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - 27);
+
+  // Build calendar - 7x4 grid showing last 28 days
+  let html = '<div class="practice-calendar">';
+
+  // Day headers
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  html += '<div class="calendar-grid">';
+  html += '<div class="calendar-row calendar-day-headers">';
+  days.forEach(day => {
+    html += `<div class="calendar-day-header">${day}</div>`;
+  });
   html += '</div>';
 
-  html += '<div style="margin-top: 16px; display: flex; gap: 16px; font-size: 0.875rem; color: var(--gray-600);">';
-  html += '<div><span style="display: inline-block; width: 16px; height: 16px; background: var(--success); border-radius: 4px; margin-right: 4px; vertical-align: middle;"></span> Practice logged</div>';
-  html += '<div><span style="display: inline-block; width: 16px; height: 16px; background: var(--gray-200); border-radius: 4px; margin-right: 4px; vertical-align: middle;"></span> No practice</div>';
+  // Generate 4 weeks (28 days)
+  let currentDate = new Date(startDate);
+
+  for (let week = 0; week < 4; week++) {
+    html += '<div class="calendar-row">';
+
+    for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
+      const dateStr = currentDate.toLocaleDateString('en-CA');
+      const dayNum = currentDate.getDate();
+      const minutes = dateMinutes[dateStr] || 0;
+      const bgColor = getColor(minutes);
+      const isToday = dateStr === todayString;
+
+      let tooltip = utils.formatDate(dateStr);
+      if (minutes > 0) {
+        tooltip += ` - ${utils.minutesToHours(minutes)}`;
+      } else {
+        tooltip += ' - No practice';
+      }
+
+      const cellClasses = [
+        'calendar-day',
+        isToday ? 'today' : ''
+      ].filter(Boolean).join(' ');
+
+      html += `
+        <div class="${cellClasses}"
+             style="background: ${bgColor};"
+             title="${tooltip}">
+          <span class="day-number">${dayNum}</span>
+        </div>
+      `;
+
+      // Move to next day
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    html += '</div>';
+  }
+
+  html += '</div>'; // calendar-grid
+
+  // Legend
+  html += '<div class="calendar-legend">';
+  html += '<span>Less</span>';
+  html += '<div class="legend-cell" style="background: var(--gray-200);" title="No practice"></div>';
+  html += '<div class="legend-cell" style="background: #86efac;" title="< 1 hour"></div>';
+  html += '<div class="legend-cell" style="background: #22c55e;" title="1-2 hours"></div>';
+  html += '<div class="legend-cell" style="background: #15803d;" title="2+ hours"></div>';
+  html += '<span>More</span>';
   html += '</div>';
+
+  html += '</div>'; // practice-calendar
 
   container.innerHTML = html;
 }

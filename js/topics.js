@@ -5,14 +5,48 @@ let currentSort = 'category';
 window.addEventListener('DOMContentLoaded', async () => {
   setActiveNav('topics.html');
   await data.init();
+  recalculateTopicStatsFromLogs();
   loadTopicsSummary();
   loadTopicsList();
 });
 
+// Recalculate topic stats from daily logs (source of truth)
+function recalculateTopicStatsFromLogs() {
+  const logs = data.getDailyLogs();
+  const topics = data.getTopics();
+
+  // Reset all topic stats (except completed status)
+  topics.forEach(topic => {
+    topic.practiceCount = 0;
+    topic.lastPracticed = null;
+  });
+
+  // Recalculate from logs
+  logs.forEach(log => {
+    if (log.topics && log.topics.length > 0) {
+      log.topics.forEach(topicId => {
+        const topic = topics.find(t => t.id === topicId);
+        if (topic) {
+          topic.practiceCount++;
+          if (!topic.lastPracticed || log.date > topic.lastPracticed) {
+            topic.lastPracticed = log.date;
+          }
+        }
+      });
+    }
+  });
+
+  // Save updated topics
+  storage.set(STORAGE_KEYS.TOPICS, topics);
+}
+
 function loadTopicsSummary() {
   const topics = data.getTopics();
-  const totalTopics = topics.length;
-  const practicedTopics = topics.filter(t => t.practiceCount > 0).length;
+  const activeTopics = topics.filter(t => !t.completed);
+  const completedTopics = topics.filter(t => t.completed);
+
+  const totalTopics = activeTopics.length;
+  const practicedTopics = activeTopics.filter(t => t.practiceCount > 0).length;
   const coveragePercent = totalTopics > 0 ? Math.round((practicedTopics / totalTopics) * 100) : 0;
 
   document.getElementById('totalTopics').textContent = totalTopics;
@@ -20,11 +54,11 @@ function loadTopicsSummary() {
   document.getElementById('coveragePercent').textContent = coveragePercent + '%';
   document.getElementById('coverageProgress').style.width = coveragePercent + '%';
 
-  // Count by status
+  // Count by status (only active topics)
   const today = utils.getTodayDate();
   let greenCount = 0, yellowCount = 0, redCount = 0;
 
-  topics.forEach(topic => {
+  activeTopics.forEach(topic => {
     const status = getTopicStatus(topic, today);
     if (status === 'green') greenCount++;
     else if (status === 'yellow') yellowCount++;
@@ -34,6 +68,12 @@ function loadTopicsSummary() {
   document.getElementById('greenCount').textContent = greenCount;
   document.getElementById('yellowCount').textContent = yellowCount;
   document.getElementById('redCount').textContent = redCount;
+
+  // Update completed count if element exists
+  const completedCountEl = document.getElementById('completedCount');
+  if (completedCountEl) {
+    completedCountEl.textContent = completedTopics.length;
+  }
 }
 
 function getTopicStatus(topic, today) {
@@ -48,18 +88,48 @@ function getTopicStatus(topic, today) {
 
 function loadTopicsList() {
   const container = document.getElementById('topicsList');
-  const topics = data.getTopics();
+  const allTopics = data.getTopics();
+  const activeTopics = allTopics.filter(t => !t.completed);
+  const completedTopics = allTopics.filter(t => t.completed);
   const today = utils.getTodayDate();
 
+  let html = '';
+
+  // Active topics
   if (currentSort === 'category') {
-    loadTopicsByCategory(container, topics, today);
+    html += loadTopicsByCategory(activeTopics, today, false);
   } else {
-    loadTopicsFlat(container, topics, today);
+    html += loadTopicsFlat(activeTopics, today, false);
   }
+
+  // Casual Revision section (completed topics)
+  if (completedTopics.length > 0) {
+    html += `
+      <div class="topic-category casual-revision-section">
+        <div class="category-header casual-revision-header" onclick="toggleCategory('casual-revision')">
+          <span>Casual Revision (${completedTopics.length} topics)</span>
+          <span id="arrow-casual-revision">▶</span>
+        </div>
+        <div class="topic-list collapsed" id="category-casual-revision">
+          ${completedTopics.map(topic => renderTopicItem(topic, today, true)).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  container.innerHTML = html;
 }
 
-function loadTopicsByCategory(container, topics, today) {
-  const categorized = data.getTopicsByCategory();
+function loadTopicsByCategory(topics, today, isCompleted) {
+  // Group topics by category
+  const categorized = {};
+  topics.forEach(topic => {
+    if (!categorized[topic.category]) {
+      categorized[topic.category] = [];
+    }
+    categorized[topic.category].push(topic);
+  });
+
   let html = '';
 
   Object.keys(categorized).sort().forEach(category => {
@@ -72,16 +142,16 @@ function loadTopicsByCategory(container, topics, today) {
           <span id="arrow-${sanitizeId(category)}">▼</span>
         </div>
         <div class="topic-list" id="category-${sanitizeId(category)}">
-          ${categoryTopics.map(topic => renderTopicItem(topic, today)).join('')}
+          ${categoryTopics.map(topic => renderTopicItem(topic, today, isCompleted)).join('')}
         </div>
       </div>
     `;
   });
 
-  container.innerHTML = html;
+  return html;
 }
 
-function loadTopicsFlat(container, topics, today) {
+function loadTopicsFlat(topics, today, isCompleted) {
   let sortedTopics = [...topics];
 
   if (currentSort === 'alphabetical') {
@@ -98,25 +168,34 @@ function loadTopicsFlat(container, topics, today) {
   }
 
   let html = '<div class="card"><div class="topic-list">';
-  html += sortedTopics.map(topic => renderTopicItem(topic, today)).join('');
+  html += sortedTopics.map(topic => renderTopicItem(topic, today, isCompleted)).join('');
   html += '</div></div>';
 
-  container.innerHTML = html;
+  return html;
 }
 
-function renderTopicItem(topic, today) {
+function renderTopicItem(topic, today, isCompleted) {
   const status = getTopicStatus(topic, today);
-  const statusClass = `status-${status}`;
+  const statusClass = isCompleted ? 'status-completed' : `status-${status}`;
 
   const lastPracticed = topic.lastPracticed
     ? `Last: ${utils.formatDate(topic.lastPracticed)}`
     : 'Never practiced';
 
+  const actionButton = isCompleted
+    ? `<button class="btn btn-small btn-secondary topic-action-btn" onclick="event.stopPropagation(); restoreTopic('${topic.id}')" title="Restore to active">↩</button>`
+    : `<button class="btn btn-small topic-action-btn" onclick="event.stopPropagation(); markAsCompleted('${topic.id}')" title="Mark as casual revision">✓</button>`;
+
   return `
-    <div class="topic-item ${statusClass}" onclick="incrementTopic('${topic.id}')">
-      <div class="topic-name">${topic.name}</div>
-      <div class="topic-stats">
-        ${topic.category} • Practiced ${topic.practiceCount}x • ${lastPracticed}
+    <div class="topic-item ${statusClass}">
+      <div class="topic-content">
+        <div class="topic-name">${topic.name}</div>
+        <div class="topic-stats">
+          ${topic.category} • Practiced ${topic.practiceCount}x • ${lastPracticed}
+        </div>
+      </div>
+      <div class="topic-actions">
+        ${actionButton}
       </div>
     </div>
   `;
@@ -139,15 +218,27 @@ function toggleCategory(categoryId) {
   }
 }
 
-function incrementTopic(topicId) {
-  data.incrementTopicPractice(topicId);
-  loadTopicsSummary();
-  loadTopicsList();
-
-  // Show brief feedback
-  const topic = data.getTopics().find(t => t.id === topicId);
+function markAsCompleted(topicId) {
+  const topics = data.getTopics();
+  const topic = topics.find(t => t.id === topicId);
   if (topic) {
-    showToast(`✓ ${topic.name} - Practice count: ${topic.practiceCount}`);
+    topic.completed = true;
+    storage.set(STORAGE_KEYS.TOPICS, topics);
+    loadTopicsSummary();
+    loadTopicsList();
+    showToast(`✓ "${topic.name}" moved to Casual Revision`);
+  }
+}
+
+function restoreTopic(topicId) {
+  const topics = data.getTopics();
+  const topic = topics.find(t => t.id === topicId);
+  if (topic) {
+    topic.completed = false;
+    storage.set(STORAGE_KEYS.TOPICS, topics);
+    loadTopicsSummary();
+    loadTopicsList();
+    showToast(`↩ "${topic.name}" restored to active topics`);
   }
 }
 

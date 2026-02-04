@@ -33,3 +33,7 @@ Temporary Items
 Thumbs.db
 ehthumbs.db
 Desktop.ini
+
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md

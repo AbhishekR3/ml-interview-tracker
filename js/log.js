@@ -39,11 +39,19 @@ function initializeForm() {
 function loadTopicsSelect() {
   console.log('loadTopicsSelect() called');
   const select = document.getElementById('topicSelect');
-  const topics = data.getTopics();
-  console.log('Topics retrieved:', topics ? topics.length : 'null');
+  const allTopics = data.getTopics();
+  // Filter out completed topics (in Casual Revision)
+  const topics = allTopics.filter(t => !t.completed);
+  console.log('Active topics:', topics.length);
 
   // Group by category
-  const categorized = data.getTopicsByCategory();
+  const categorized = {};
+  topics.forEach(topic => {
+    if (!categorized[topic.category]) {
+      categorized[topic.category] = [];
+    }
+    categorized[topic.category].push(topic);
+  });
   console.log('Categories:', Object.keys(categorized));
 
   select.innerHTML = '';
@@ -132,10 +140,7 @@ function handleFormSubmit(e) {
     notes: document.getElementById('notes').value.trim()
   };
 
-  // Update topic practice counts
-  formData.topics.forEach(topicId => {
-    data.incrementTopicPractice(topicId);
-  });
+  // Topic stats are recalculated from logs on the Topics page
 
   if (editingLogId) {
     // Update existing log
@@ -203,7 +208,7 @@ function loadLogHistory() {
           <strong>Questions:</strong> ${totalQuestions} total
           ${formatResourceBreakdown(log.resources)}<br>
           ${topicNames.length > 0 ? `<strong>Topics:</strong> ${topicNames.join(', ')}<br>` : ''}
-          ${log.notes ? `<strong>Notes:</strong> ${log.notes}` : ''}
+          ${log.notes ? `<strong>Notes:</strong><div class="log-notes">${log.notes.replace(/\n/g, '<br>')}</div>` : ''}
         </div>
       </div>
     `;

@@ -12,7 +12,7 @@
     <div class="header-content">
       <h1>ML Interview Prep Tracker</h1>
       <div class="header-right">
-        <div id="syncIndicator" class="sync-indicator" onclick="githubSync.manualSync()">
+        <div id="syncIndicator" class="sync-indicator" onclick="supabaseSync.manualSync()">
           <span class="sync-icon">○</span>
           <span class="sync-text"></span>
         </div>
@@ -101,10 +101,10 @@
         </div>
 
         <div class="form-group">
-          <label for="notes">Notes (optional, max 200 characters)</label>
-          <textarea id="notes" maxlength="200" placeholder="Any additional notes about this session..."></textarea>
+          <label for="notes">Notes (optional, max 1000 characters)</label>
+          <textarea id="notes" maxlength="1000" rows="4" placeholder="Any additional notes about this session..."></textarea>
           <div style="text-align: right; font-size: 0.875rem; color: var(--gray-600);">
-            <span id="charCount">0</span> / 200
+            <span id="charCount">0</span> / 1000
           </div>
         </div>
 
@@ -134,6 +134,7 @@
       window.location.href = 'login.html';
     }
   </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./js/app.js"></script>
   <script src="./js/sync.js"></script>
   <script src="./js/log.js"></script>

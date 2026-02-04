@@ -38,14 +38,45 @@ function loadDashboard() {
     document.getElementById('streakIcon').textContent = '⚪';
   }
 
+  const settings = data.getSettings();
+
+  // Daily progress
+  const dailyMinutes = analytics.getDailyMinutes();
+  const dailyGoalMinutes = settings.dailyGoalMinutes;
+  const dailyProgress = Math.min((dailyMinutes / dailyGoalMinutes) * 100, 100);
+  const dailyExceeded = dailyMinutes >= dailyGoalMinutes;
+
+  const dailyProgressBar = document.getElementById('dailyProgress');
+  dailyProgressBar.style.width = dailyExceeded ? '100%' : dailyProgress + '%';
+  document.getElementById('dailyProgressText').textContent =
+    `${dailyMinutes} / ${dailyGoalMinutes} min`;
+
+  if (dailyExceeded) {
+    dailyProgressBar.classList.add('exceeded');
+    document.getElementById('dailyStar').classList.remove('hidden');
+  } else {
+    dailyProgressBar.classList.remove('exceeded');
+    document.getElementById('dailyStar').classList.add('hidden');
+  }
+
   // Weekly progress
   const weeklyHours = analytics.getWeeklyHours();
-  const settings = data.getSettings();
   const goalHours = settings.weeklyGoalHours;
-  const progress = Math.min((weeklyHours / goalHours) * 100, 100);
-  document.getElementById('weeklyProgress').style.width = progress + '%';
+  const weeklyProgress = Math.min((weeklyHours / goalHours) * 100, 100);
+  const weeklyExceeded = weeklyHours >= goalHours;
+
+  const weeklyProgressBar = document.getElementById('weeklyProgress');
+  weeklyProgressBar.style.width = weeklyExceeded ? '100%' : weeklyProgress + '%';
   document.getElementById('weeklyProgressText').textContent =
     `${weeklyHours.toFixed(1)} / ${goalHours} hours`;
+
+  if (weeklyExceeded) {
+    weeklyProgressBar.classList.add('exceeded');
+    document.getElementById('weeklyStar').classList.remove('hidden');
+  } else {
+    weeklyProgressBar.classList.remove('exceeded');
+    document.getElementById('weeklyStar').classList.add('hidden');
+  }
 
   // Week calendar
   loadWeekCalendar();
@@ -62,14 +93,6 @@ function loadDashboard() {
   document.getElementById('totalQuestions').textContent = analytics.getTotalQuestions();
   document.getElementById('weeklyTopics').textContent = analytics.getWeeklyTopics();
   document.getElementById('monthlyApps').textContent = analytics.getMonthlyApplications();
-
-  // Milestone
-  const daysToMilestone = analytics.getDaysUntilMilestone();
-  if (daysToMilestone !== null) {
-    document.getElementById('daysToMilestone').textContent = daysToMilestone;
-  } else {
-    document.getElementById('milestoneCard').style.display = 'none';
-  }
 }
 
 function loadWeekCalendar() {

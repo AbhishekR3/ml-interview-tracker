@@ -11,6 +11,7 @@ const STORAGE_KEYS = {
 
 // Motivational quotes
 const QUOTES = [
+  // General motivation
   { text: "The expert in anything was once a beginner.", author: "Helen Hayes" },
   { text: "It's not about perfect. It's about effort.", author: "Jillian Michaels" },
   { text: "Small daily improvements over time lead to stunning results.", author: "Robin Sharma" },
@@ -25,16 +26,41 @@ const QUOTES = [
   { text: "The best time to plant a tree was 20 years ago. The second best time is now.", author: "" },
   { text: "Discipline is choosing between what you want now and what you want most.", author: "" },
   { text: "You are one decision away from a completely different life.", author: "" },
-  { text: "The pain of discipline is nothing like the pain of disappointment.", author: "Justin Langer" }
+  { text: "The pain of discipline is nothing like the pain of disappointment.", author: "Justin Langer" },
+  { text: "Don't watch the clock; do what it does. Keep going.", author: "Sam Levenson" },
+  { text: "The secret of getting ahead is getting started.", author: "Mark Twain" },
+  { text: "It does not matter how slowly you go as long as you do not stop.", author: "Confucius" },
+  { text: "Quality is not an act, it is a habit.", author: "Aristotle" },
+  { text: "The difference between ordinary and extraordinary is that little extra.", author: "" },
+  // Sports motivation
+  { text: "Hard work beats talent when talent doesn't work hard.", author: "Tim Notke" },
+  { text: "You miss 100% of the shots you don't take.", author: "Wayne Gretzky" },
+  { text: "I've failed over and over again in my life. And that is why I succeed.", author: "Michael Jordan" },
+  { text: "It's not whether you get knocked down; it's whether you get up.", author: "Vince Lombardi" },
+  { text: "Champions keep playing until they get it right.", author: "Billie Jean King" },
+  { text: "The more difficult the victory, the greater the happiness in winning.", author: "Pelé" },
+  { text: "You have to expect things of yourself before you can do them.", author: "Michael Jordan" },
+  { text: "Talent wins games, but teamwork and intelligence win championships.", author: "Michael Jordan" },
+  { text: "The only way to prove you are a good sport is to lose.", author: "Ernie Banks" },
+  { text: "Winners never quit and quitters never win.", author: "Vince Lombardi" },
+  { text: "Success is no accident. It is hard work, perseverance, learning, studying, sacrifice.", author: "Pelé" },
+  { text: "I hated every minute of training, but I said, don't quit. Suffer now and live the rest of your life as a champion.", author: "Muhammad Ali" },
+  { text: "The will to win is important, but the will to prepare is vital.", author: "Joe Paterno" },
+  { text: "Excellence is not a singular act, but a habit. You are what you repeatedly do.", author: "Shaquille O'Neal" },
+  { text: "Push yourself again and again. Don't give an inch until the final buzzer sounds.", author: "Larry Bird" },
+  { text: "Age is no barrier. It's a limitation you put on your mind.", author: "Jackie Joyner-Kersee" },
+  { text: "Set your goals high, and don't stop till you get there.", author: "Bo Jackson" },
+  { text: "Never give up! Failure and rejection are only the first step to succeeding.", author: "Jim Valvano" },
+  { text: "If you can't outplay them, outwork them.", author: "Ben Hogan" },
+  { text: "The principle is competing against yourself. It's about self-improvement.", author: "Steve Young" }
 ];
 
 // Utility functions
 const utils = {
-  // Get today's date in YYYY-MM-DD format (PST timezone)
+  // Get today's date in YYYY-MM-DD format (PT timezone)
   getTodayDate() {
-    const pstDate = new Date().toLocaleString('en-US', { timeZone: 'America/Los_Angeles' });
-    const date = new Date(pstDate);
-    return date.toISOString().split('T')[0];
+    // Use en-CA locale which gives YYYY-MM-DD format directly
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
   },
 
   // Format date for display (PST timezone)
@@ -55,15 +81,12 @@ const utils = {
     return pstDate.getDay();
   },
 
-  // Get start of week (Sunday) for a given date (PST timezone)
+  // Get start of week (Sunday) for a given date (PT timezone)
   getWeekStart(dateString) {
-    // Convert to PST
     const date = new Date(dateString + 'T12:00:00');
-    const pstDate = new Date(date.toLocaleString('en-US', { timeZone: 'America/Los_Angeles' }));
-    const day = pstDate.getDay();
-    const diff = day; // Sunday = 0, so no adjustment needed
-    pstDate.setDate(pstDate.getDate() - diff);
-    return pstDate.toISOString().split('T')[0];
+    const day = date.getDay();
+    date.setDate(date.getDate() - day);
+    return date.toLocaleDateString('en-CA', { timeZone: 'America/Los_Angeles' });
   },
 
   // Get days between two dates
@@ -173,9 +196,8 @@ const data = {
 
     if (!storage.get(STORAGE_KEYS.SETTINGS)) {
       storage.set(STORAGE_KEYS.SETTINGS, {
-        targetDate: null,
         weeklyGoalHours: 14,
-        dailyGoalMinutes: 120
+        dailyGoalMinutes: 30
       });
     }
 
@@ -311,9 +333,8 @@ const data = {
   // Settings
   getSettings() {
     return storage.get(STORAGE_KEYS.SETTINGS) || {
-      targetDate: null,
       weeklyGoalHours: 14,
-      dailyGoalMinutes: 120
+      dailyGoalMinutes: 30
     };
   },
 
@@ -370,6 +391,21 @@ const analytics = {
     }
 
     return streak;
+  },
+
+  // Get daily minutes for today
+  getDailyMinutes() {
+    const logs = data.getDailyLogs();
+    const today = utils.getTodayDate();
+
+    let totalMinutes = 0;
+    logs.forEach(log => {
+      if (log.date === today) {
+        totalMinutes += log.minutesSpent || 0;
+      }
+    });
+
+    return totalMinutes;
   },
 
   // Get weekly hours (Sunday to Saturday)
