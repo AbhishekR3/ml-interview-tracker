@@ -14,23 +14,6 @@
       "topics": [],
       "notes": "https://platform.stratascratch.com/coding/10557-minimum-cpus-for-task-scheduling?code_type=1\n\nFor SQL, calculating concurrent (with timestamps) think of setting start_time to +1 and end_time to -1",
       "id": "ml7ckltmcbnhv71e6pn"
-    },
-    {
-      "date": "2026-02-04",
-      "minutesSpent": 30,
-      "resources": {
-        "interviewPrepPDF": 2,
-        "stratascratch": 0,
-        "hackerrank": 0,
-        "leetcode": 0,
-        "tryexponent": 0,
-        "claudeQA": 0
-      },
-      "topics": [
-        "ml76i47x2ne0m6ali0t"
-      ],
-      "notes": "",
-      "id": "ml7d2z76hks2g35cpkn"
     }
   ],
   "topics": [
@@ -930,5 +913,5 @@
     "weeklyGoalHours": 5,
     "dailyGoalMinutes": 30
   },
-  "lastModified": "2026-02-04T01:42:00.429Z"
+  "lastModified": "2026-02-04T01:42:05.968Z"
 }
