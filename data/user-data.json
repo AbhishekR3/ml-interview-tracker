@@ -1,5 +1,21 @@
 {
-  "dailyLogs": [],
+  "dailyLogs": [
+    {
+      "date": "2026-02-04",
+      "minutesSpent": 30,
+      "resources": {
+        "interviewPrepPDF": 0,
+        "stratascratch": 3,
+        "hackerrank": 0,
+        "leetcode": 0,
+        "tryexponent": 0,
+        "claudeQA": 0
+      },
+      "topics": [],
+      "notes": "https://platform.stratascratch.com/coding/10557-minimum-cpus-for-task-scheduling?code_type=1\n\nFor SQL, calculating concurrent (with timestamps) think of setting start_time to +1 and end_time to -1",
+      "id": "ml7ckltmcbnhv71e6pn"
+    }
+  ],
   "topics": [
     {
       "id": "ml76i47x4a4sbgodpxt",
@@ -897,5 +913,5 @@
     "weeklyGoalHours": 14,
     "dailyGoalMinutes": 120
   },
-  "lastModified": "2026-02-04T00:28:38.105Z"
+  "lastModified": "2026-02-04T01:27:01.198Z"
 }
