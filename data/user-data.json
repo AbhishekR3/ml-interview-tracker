@@ -231,7 +231,7 @@
       "id": "ml76i47xmag9firnew",
       "category": "Computer Vision",
       "name": "Object Detection (YOLO)",
-      "practiceCount": 3,
+      "practiceCount": 4,
       "lastPracticed": "2026-02-04"
     },
     {
@@ -913,5 +913,5 @@
     "weeklyGoalHours": 5,
     "dailyGoalMinutes": 30
   },
-  "lastModified": "2026-02-04T01:30:25.957Z"
+  "lastModified": "2026-02-04T01:30:31.637Z"
 }
