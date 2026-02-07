@@ -30,12 +30,48 @@
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./js/app.js"></script>
+  <script src="./js/sync.js"></script>
   <script src="./js/auth.js"></script>
   <script>
-    // Check if already authenticated
-    if (auth.isAuthenticated()) {
-      window.location.href = 'index.html';
-    }
+    // Check if already authenticated or device is authorized
+    (async () => {
+      // First check if already authenticated locally
+      if (auth.isAuthenticated()) {
+        window.location.href = 'index.html';
+        return;
+      }
+
+      // Try to sync and auto-login if device is authorized
+      if (typeof supabaseSync !== 'undefined') {
+        try {
+          supabaseSync.autoConfigureDefaults();
+          if (supabaseSync.isConfigured()) {
+            const result = await supabaseSync.fetchFromSupabase();
+            if (result && result.exists && result.data) {
+              if (result.data.settings) {
+                storage.set(STORAGE_KEYS.SETTINGS, result.data.settings);
+              }
+              if (auth.autoLoginIfAuthorized()) {
+                window.location.href = 'index.html';
+                return;
+              }
+            }
+          }
+        } catch (e) {
+          console.log('Auto-login check failed:', e);
+          // Show error popup for connection issues
+          if (typeof supabaseSync !== 'undefined' && supabaseSync.showErrorPopup) {
+            supabaseSync.showErrorPopup(
+              'Connection Failed',
+              'Could not connect to cloud sync. You can still log in and work offline.',
+              `Error: ${e.message}`
+            );
+          }
+        }
+      }
+    })();
 
     async function handleLogin(event) {
       event.preventDefault();

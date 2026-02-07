@@ -520,10 +520,21 @@ function setActiveNav(pageName) {
 
 // Initialize data on page load
 document.addEventListener('DOMContentLoaded', async () => {
+  // IMPORTANT: Sync first BEFORE loading defaults
+  // This ensures remote data is pulled before we potentially overwrite with defaults
+  if (typeof githubSync !== 'undefined' && githubSync.isConfigured()) {
+    console.log('Sync configured, pulling remote data first...');
+    await githubSync.init();
+  }
+
+  // Now initialize local data (loads defaults only if still empty after sync)
   await data.init();
 
-  // Initialize GitHub sync if configured
-  if (typeof githubSync !== 'undefined') {
-    await githubSync.init();
+  // If sync wasn't configured initially, still set up the sync hooks
+  if (typeof githubSync !== 'undefined' && !githubSync.isConfigured()) {
+    // Just update the indicator, don't call full init
+    if (typeof supabaseSync !== 'undefined') {
+      supabaseSync.updateSyncIndicator('not-configured');
+    }
   }
 });

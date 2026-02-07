@@ -158,16 +158,17 @@
     <p>ML Interview Prep Tracker v1.0</p>
   </footer>
 
-  <script src="./js/auth.js"></script>
-  <script>
-    // Check authentication
-    if (!auth.isAuthenticated()) {
-      window.location.href = 'login.html';
-    }
-  </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="./js/app.js"></script>
   <script src="./js/sync.js"></script>
+  <script src="./js/auth.js"></script>
+  <script>
+    // Check authentication (async - syncs first to check device authorization)
+    (async () => {
+      const isAuthed = await auth.initWithSync();
+      if (!isAuthed) return;
+    })();
+  </script>
   <script src="./js/applications.js"></script>
 </body>
 </html>

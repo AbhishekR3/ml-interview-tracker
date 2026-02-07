@@ -5,8 +5,27 @@ const supabaseSync = {
   STORAGE_KEY_URL: 'mltracker_supabase_url',
   STORAGE_KEY_KEY: 'mltracker_supabase_key',
   STORAGE_KEY_USER_ID: 'mltracker_supabase_user_id',
+  STORAGE_KEY_LAST_MODIFIED: 'mltracker_last_modified',
   TABLE_NAME: 'user_data',
   DEBOUNCE_MS: 2000,
+
+  // Default credentials (auto-configured)
+  DEFAULT_URL: 'https://mbmlnxpifjmzodzyqqog.supabase.co',
+  DEFAULT_KEY: 'sb_publishable_NJwNAgMf-_ROZ-IN6LY3gg_OCjvFceL',
+  DEFAULT_USER_ID: 'user_1770184708555_2zl59zi3d',
+
+  // Auto-configure with default credentials if not already set
+  autoConfigureDefaults() {
+    if (!this.getUrl()) {
+      this.setUrl(this.DEFAULT_URL);
+    }
+    if (!this.getKey()) {
+      this.setKey(this.DEFAULT_KEY);
+    }
+    if (!this.getStoredUserId()) {
+      this.setStoredUserId(this.DEFAULT_USER_ID);
+    }
+  },
 
   // State
   _client: null,
@@ -177,6 +196,29 @@ const supabaseSync = {
     if (banner) banner.classList.add('hidden');
   },
 
+  // Show error popup with detailed error message
+  showErrorPopup(title, message, details = '') {
+    // Remove existing popup if any
+    const existingPopup = document.getElementById('syncErrorPopup');
+    if (existingPopup) existingPopup.remove();
+
+    const popup = document.createElement('div');
+    popup.id = 'syncErrorPopup';
+    popup.className = 'sync-error-popup';
+    popup.innerHTML = `
+      <div class="sync-error-popup-content">
+        <h3>${title}</h3>
+        <p>${message}</p>
+        ${details ? `<pre class="error-details">${details}</pre>` : ''}
+        <div class="popup-buttons">
+          <button class="btn" onclick="this.closest('.sync-error-popup').remove()">Close</button>
+          <button class="btn btn-primary" onclick="supabaseSync.manualSync(); this.closest('.sync-error-popup').remove()">Retry</button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(popup);
+  },
+
   // Get all syncable data from localStorage
   getLocalData() {
     return {
@@ -184,7 +226,7 @@ const supabaseSync = {
       topics: storage.get(STORAGE_KEYS.TOPICS) || [],
       applications: storage.get(STORAGE_KEYS.APPLICATIONS) || [],
       settings: storage.get(STORAGE_KEYS.SETTINGS) || {},
-      lastModified: new Date().toISOString()
+      lastModified: this.getStoredLastModified() || null
     };
   },
 
@@ -194,6 +236,37 @@ const supabaseSync = {
     if (data.topics) storage.set(STORAGE_KEYS.TOPICS, data.topics);
     if (data.applications) storage.set(STORAGE_KEYS.APPLICATIONS, data.applications);
     if (data.settings) storage.set(STORAGE_KEYS.SETTINGS, data.settings);
+    // Persist lastModified timestamp
+    if (data.lastModified) {
+      localStorage.setItem(this.STORAGE_KEY_LAST_MODIFIED, data.lastModified);
+    }
+  },
+
+  // Get stored lastModified timestamp
+  getStoredLastModified() {
+    return localStorage.getItem(this.STORAGE_KEY_LAST_MODIFIED);
+  },
+
+  // Set lastModified timestamp
+  setLastModified(timestamp) {
+    localStorage.setItem(this.STORAGE_KEY_LAST_MODIFIED, timestamp);
+  },
+
+  // Check if local data is empty or just defaults (no real user data)
+  isLocalDataEmpty() {
+    const logs = storage.get(STORAGE_KEYS.DAILY_LOGS) || [];
+    const apps = storage.get(STORAGE_KEYS.APPLICATIONS) || [];
+    const topics = storage.get(STORAGE_KEYS.TOPICS) || [];
+
+    // If no logs and no applications, consider it empty
+    // (topics may be default topics loaded on init)
+    const hasNoLogs = logs.length === 0;
+    const hasNoApps = apps.length === 0;
+
+    // Check if all topics have zero practice count (meaning they're defaults)
+    const allTopicsUnpracticed = topics.every(t => !t.practiceCount || t.practiceCount === 0);
+
+    return hasNoLogs && hasNoApps && allTopicsUnpracticed;
   },
 
   // Fetch data from Supabase
@@ -266,9 +339,15 @@ const supabaseSync = {
       const result = await this.fetchFromSupabase();
 
       if (!result.exists) {
-        // No remote data yet, push local data
-        console.log('No remote data found, pushing local data...');
-        await this.push();
+        // No remote data yet - only push if local has meaningful data
+        if (this.isLocalDataEmpty()) {
+          console.log('No remote data and local is empty, nothing to sync');
+          this.updateSyncIndicator('success');
+          this.hideOfflineBanner();
+        } else {
+          console.log('No remote data found, pushing local data...');
+          await this.push();
+        }
         return true;
       }
 
@@ -279,7 +358,20 @@ const supabaseSync = {
       const remoteTime = new Date(remoteData.lastModified || 0).getTime();
       const localTime = new Date(localData.lastModified || 0).getTime();
 
-      if (remoteTime > localTime) {
+      // If local has no timestamp (new device), always pull remote
+      if (!localData.lastModified) {
+        console.log('Local has no timestamp (new device), pulling remote data...');
+        this.saveToLocal(remoteData);
+        this.updateSyncIndicator('success');
+        this.hideOfflineBanner();
+
+        // Trigger UI refresh
+        if (typeof refreshPage === 'function') {
+          refreshPage();
+        } else {
+          window.location.reload();
+        }
+      } else if (remoteTime > localTime) {
         // Remote is newer, update local
         console.log('Remote data is newer, updating local...');
         this.saveToLocal(remoteData);
@@ -293,9 +385,22 @@ const supabaseSync = {
           window.location.reload();
         }
       } else if (localTime > remoteTime) {
-        // Local is newer, push to remote
-        console.log('Local data is newer, pushing to remote...');
-        await this.push();
+        // Local is newer - but only push if local has meaningful data
+        if (this.isLocalDataEmpty()) {
+          console.log('Local appears newer but is empty, pulling remote instead...');
+          this.saveToLocal(remoteData);
+          this.updateSyncIndicator('success');
+          this.hideOfflineBanner();
+
+          if (typeof refreshPage === 'function') {
+            refreshPage();
+          } else {
+            window.location.reload();
+          }
+        } else {
+          console.log('Local data is newer, pushing to remote...');
+          await this.push();
+        }
       } else {
         // Same timestamp, already in sync
         console.log('Data is in sync');
@@ -308,6 +413,11 @@ const supabaseSync = {
       console.error('Pull failed:', error);
       this.updateSyncIndicator('error', 'Sync failed');
       this.showOfflineBanner(true, `Sync failed: ${error.message}`);
+      this.showErrorPopup(
+        'Sync Failed',
+        'Could not connect to Supabase cloud sync.',
+        `Error: ${error.message}\nCode: ${error.code || 'N/A'}\nDetails: ${error.details || error.hint || 'No additional details'}`
+      );
       return false;
     } finally {
       this._isSyncing = false;
@@ -326,7 +436,12 @@ const supabaseSync = {
 
     try {
       const localData = this.getLocalData();
+      // Generate new timestamp for this push
+      const newTimestamp = new Date().toISOString();
+      localData.lastModified = newTimestamp;
       await this.pushToSupabase(localData);
+      // Persist the timestamp locally after successful push
+      this.setLastModified(newTimestamp);
       this.updateSyncIndicator('success');
       this.hideOfflineBanner();
       return true;
@@ -334,6 +449,11 @@ const supabaseSync = {
       console.error('Push failed:', error);
       this.updateSyncIndicator('error', 'Sync failed');
       this.showOfflineBanner(true, `Sync failed: ${error.message}`);
+      this.showErrorPopup(
+        'Sync Failed',
+        'Could not push data to Supabase cloud.',
+        `Error: ${error.message}\nCode: ${error.code || 'N/A'}\nDetails: ${error.details || error.hint || 'No additional details'}`
+      );
       return false;
     } finally {
       this._isSyncing = false;
@@ -387,7 +507,8 @@ const supabaseSync = {
           const remoteTime = new Date(remoteData.lastModified || 0).getTime();
           const localTime = new Date(localData.lastModified || 0).getTime();
 
-          if (remoteTime > localTime) {
+          // If local has no timestamp or remote is newer, update local
+          if (!localData.lastModified || remoteTime > localTime) {
             console.log('Realtime: Remote is newer, updating local...');
             this.saveToLocal(remoteData);
             this.updateSyncIndicator('success');
@@ -408,6 +529,9 @@ const supabaseSync = {
 
   // Initialize sync on page load
   async init() {
+    // Auto-configure with default credentials if not already set
+    this.autoConfigureDefaults();
+
     if (!this.isConfigured()) {
       this.updateSyncIndicator('not-configured');
       return;
@@ -431,8 +555,9 @@ const supabaseSync = {
     const originalSet = storage.set;
     storage.set = (key, value) => {
       originalSet.call(storage, key, value);
-      // Schedule push for data keys (not settings)
-      if (Object.values(STORAGE_KEYS).includes(key)) {
+      // Schedule push for data keys, but NOT when we're syncing
+      // (to avoid pushing back data we just received from remote)
+      if (Object.values(STORAGE_KEYS).includes(key) && !supabaseSync._isSyncing) {
         supabaseSync.schedulePush();
       }
     };
@@ -465,7 +590,11 @@ const supabaseSync = {
 
 // Alias for backwards compatibility
 const githubSync = {
-  isConfigured: () => supabaseSync.isConfigured(),
+  isConfigured: () => {
+    // Auto-configure defaults before checking
+    supabaseSync.autoConfigureDefaults();
+    return supabaseSync.isConfigured();
+  },
   updateSyncIndicator: (status, msg) => supabaseSync.updateSyncIndicator(status, msg),
   manualSync: () => supabaseSync.manualSync(),
   init: () => supabaseSync.init()

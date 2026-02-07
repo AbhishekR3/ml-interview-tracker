@@ -892,6 +892,60 @@ footer {
   display: none;
 }
 
+/* Sync Error Popup */
+.sync-error-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.sync-error-popup-content {
+  background: var(--card-bg);
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 4px 20px var(--card-shadow);
+}
+
+.sync-error-popup-content h3 {
+  color: var(--danger);
+  margin-bottom: 12px;
+  font-size: 1.25rem;
+}
+
+.sync-error-popup-content p {
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.sync-error-popup-content .error-details {
+  background: var(--gray-100);
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 16px;
+}
+
+.sync-error-popup-content .popup-buttons {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
 /* Settings Page Styles */
 .page-title {
   font-size: 1.75rem;
