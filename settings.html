@@ -36,66 +36,20 @@
 
     <!-- Cloud Sync -->
     <div class="card">
-      <h2>Cloud Sync (Supabase)</h2>
+      <h2>Cloud Sync</h2>
       <div class="sync-status-card" id="syncStatusCard">
         <div class="sync-status-icon" id="syncStatusIcon">○</div>
         <div class="sync-status-details">
           <div class="sync-status-label" id="syncStatusLabel">Not Configured</div>
-          <div class="sync-status-message" id="syncStatusMessage">Set up Supabase to sync across devices</div>
+          <div class="sync-status-message" id="syncStatusMessage">Sync your data across devices</div>
         </div>
       </div>
 
-      <form id="syncForm" onsubmit="return saveSyncSettings(event)" style="margin-top: 16px;">
-        <div class="form-group">
-          <label for="supabaseUrl">Supabase Project URL</label>
-          <input type="url" id="supabaseUrl" placeholder="https://your-project.supabase.co">
-          <small class="text-muted">Found in Project Settings > API</small>
-        </div>
+      <div id="connectionTestResult" class="connection-result hidden" style="margin-top: 16px;"></div>
 
-        <div class="form-group">
-          <label for="supabaseKey">Supabase Anon Key</label>
-          <div style="display: flex; gap: 8px;">
-            <input type="password" id="supabaseKey" placeholder="eyJ..." style="flex: 1;">
-            <button type="button" class="btn btn-small btn-secondary" onclick="toggleKeyVisibility()">Show</button>
-          </div>
-          <small class="text-muted">Found in Project Settings > API > anon public key</small>
-        </div>
-
-        <div class="form-group">
-          <label for="supabaseUserId">User ID</label>
-          <input type="text" id="supabaseUserId" placeholder="user_1234567890_abc123">
-          <small class="text-muted">Unique identifier for your data row in Supabase. This ID links to your row in the user_data table.</small>
-        </div>
-
-        <div id="connectionTestResult" class="connection-result hidden"></div>
-
-        <div class="btn-group" style="margin-top: 16px;">
-          <button type="submit" class="btn">Save & Sync</button>
-          <button type="button" class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
-          <button type="button" class="btn btn-secondary" onclick="clearSyncSettings()">Disable Sync</button>
-        </div>
-      </form>
-
-      <details style="margin-top: 24px;">
-        <summary style="cursor: pointer; color: var(--primary); font-weight: 500;">Setup Instructions</summary>
-        <div style="margin-top: 12px; padding: 16px; background: var(--gray-100); border-radius: 8px;">
-          <ol style="margin: 0; padding-left: 20px; line-height: 1.8;">
-            <li>Go to <a href="https://supabase.com" target="_blank">supabase.com</a> and create a free account</li>
-            <li>Create a new project (free tier is sufficient)</li>
-            <li>Go to <strong>Project Settings > API</strong></li>
-            <li>Copy your <strong>Project URL</strong> and paste above</li>
-            <li>Copy your <strong>anon public</strong> key and paste above</li>
-            <li>Go to <strong>SQL Editor</strong> and run this query:
-              <pre style="background: var(--gray-800); color: var(--white); padding: 12px; border-radius: 4px; margin: 8px 0; overflow-x: auto; font-size: 0.85rem;">CREATE TABLE IF NOT EXISTS user_data (
-  user_id TEXT PRIMARY KEY,
-  data JSONB NOT NULL,
-  updated_at TIMESTAMPTZ DEFAULT NOW()
-);</pre>
-            </li>
-            <li>Click "Save & Sync" to enable sync! Use the "Sync Now" button in the header to sync manually.</li>
-          </ol>
-        </div>
-      </details>
+      <div class="btn-group" style="margin-top: 16px;">
+        <button type="button" class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
+      </div>
     </div>
 
     <!-- Goals Settings -->
@@ -134,18 +88,7 @@
           <button class="btn btn-secondary" onclick="document.getElementById('importFile').click()">Import</button>
         </div>
 
-        <div class="data-action-item danger">
-          <h3>Clear All Data</h3>
-          <p class="text-muted">Delete all local data. This cannot be undone.</p>
-          <button class="btn btn-danger" onclick="clearAllData()">Clear Data</button>
-        </div>
       </div>
-    </div>
-
-    <!-- Account -->
-    <div class="card">
-      <h2>Account</h2>
-      <button class="btn btn-secondary" onclick="auth.logout()">Sign Out</button>
     </div>
   </div>
 
@@ -173,15 +116,6 @@
     });
 
     function loadSettings() {
-      // Load Supabase settings
-      const url = supabaseSync.getUrl();
-      const key = supabaseSync.getKey();
-      const userId = supabaseSync.getStoredUserId();
-
-      if (url) document.getElementById('supabaseUrl').value = url;
-      if (key) document.getElementById('supabaseKey').value = key;
-      if (userId) document.getElementById('supabaseUserId').value = userId;
-
       // Load goals
       const settings = data.getSettings();
       document.getElementById('weeklyGoalHours').value = settings.weeklyGoalHours || 14;
@@ -209,72 +143,16 @@
       }
     }
 
-    function toggleKeyVisibility() {
-      const input = document.getElementById('supabaseKey');
-      const btn = event.target;
-      if (input.type === 'password') {
-        input.type = 'text';
-        btn.textContent = 'Hide';
-      } else {
-        input.type = 'password';
-        btn.textContent = 'Show';
-      }
-    }
-
-    async function saveSyncSettings(event) {
-      event.preventDefault();
-
-      const url = document.getElementById('supabaseUrl').value.trim();
-      const key = document.getElementById('supabaseKey').value.trim();
-      const userId = document.getElementById('supabaseUserId').value.trim();
-
-      if (!url || !key) {
-        showToast('Please enter both URL and key', 'error');
-        return false;
-      }
-
-      if (!userId) {
-        showToast('Please enter a User ID', 'error');
-        return false;
-      }
-
-      supabaseSync.setUrl(url);
-      supabaseSync.setKey(key);
-      supabaseSync.setStoredUserId(userId);
-
-      updateSyncStatus();
-
-      // Trigger initial sync
-      showToast('Connecting...');
-      const success = await supabaseSync.pull();
-      if (success) {
-        showToast('Sync enabled and data synced!');
-      } else {
-        showToast('Settings saved but sync failed. Check your credentials.', 'error');
-      }
-
-      return false;
-    }
-
     async function testConnection() {
       const resultEl = document.getElementById('connectionTestResult');
       resultEl.classList.remove('hidden', 'success', 'error');
       resultEl.textContent = 'Testing connection...';
 
-      const url = document.getElementById('supabaseUrl').value.trim();
-      const key = document.getElementById('supabaseKey').value.trim();
-
-      if (!url || !key) {
+      if (!supabaseSync.isConfigured()) {
         resultEl.classList.add('error');
-        resultEl.textContent = 'Please enter both URL and key first.';
+        resultEl.textContent = 'Sync is not configured.';
         return;
       }
-
-      // Temporarily set credentials for test
-      const originalUrl = supabaseSync.getUrl();
-      const originalKey = supabaseSync.getKey();
-      supabaseSync.setUrl(url);
-      supabaseSync.setKey(key);
 
       const result = await supabaseSync.testConnection();
 
@@ -284,22 +162,6 @@
       } else {
         resultEl.classList.add('error');
         resultEl.textContent = `Connection failed: ${result.message}`;
-        // Restore original settings if test failed
-        supabaseSync.setUrl(originalUrl);
-        supabaseSync.setKey(originalKey);
-      }
-    }
-
-    function clearSyncSettings() {
-      if (confirm('Disable cloud sync? Your data will remain stored locally.')) {
-        supabaseSync.setUrl(null);
-        supabaseSync.setKey(null);
-        supabaseSync.setStoredUserId(null);
-        document.getElementById('supabaseUrl').value = '';
-        document.getElementById('supabaseKey').value = '';
-        document.getElementById('supabaseUserId').value = '';
-        updateSyncStatus();
-        showToast('Cloud sync disabled');
       }
     }
 
@@ -362,16 +224,6 @@
 
       // Reset file input
       event.target.value = '';
-    }
-
-    function clearAllData() {
-      if (confirm('Are you sure you want to delete ALL your data? This cannot be undone.')) {
-        if (confirm('This will permanently delete all your practice logs, topics, applications, and settings. Are you REALLY sure?')) {
-          storage.clearAll();
-          showToast('All data cleared');
-          window.location.reload();
-        }
-      }
     }
 
     function showToast(message, type = 'success') {

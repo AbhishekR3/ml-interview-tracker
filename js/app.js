@@ -239,11 +239,19 @@ const data = {
 
   // Daily logs
   getDailyLogs() {
+    const logs = storage.get(STORAGE_KEYS.DAILY_LOGS) || [];
+    // Filter out soft-deleted logs for display
+    return logs.filter(log => !log.deleted);
+  },
+
+  // Get all logs including deleted (for sync purposes)
+  getAllDailyLogs() {
     return storage.get(STORAGE_KEYS.DAILY_LOGS) || [];
   },
 
   addDailyLog(log) {
-    const logs = this.getDailyLogs();
+    // Use getAllDailyLogs to preserve deleted items
+    const logs = this.getAllDailyLogs();
     log.id = utils.generateId();
     log.updatedAt = new Date().toISOString();
     logs.push(log);
@@ -252,7 +260,8 @@ const data = {
   },
 
   updateDailyLog(logId, updatedLog) {
-    const logs = this.getDailyLogs();
+    // Use getAllDailyLogs to preserve deleted items
+    const logs = this.getAllDailyLogs();
     const index = logs.findIndex(log => log.id === logId);
     if (index !== -1) {
       logs[index] = { ...logs[index], ...updatedLog, updatedAt: new Date().toISOString() };
@@ -263,9 +272,15 @@ const data = {
   },
 
   deleteDailyLog(logId) {
-    const logs = this.getDailyLogs();
-    const filtered = logs.filter(log => log.id !== logId);
-    storage.set(STORAGE_KEYS.DAILY_LOGS, filtered);
+    // Use soft delete for sync support
+    const logs = this.getAllDailyLogs();
+    const index = logs.findIndex(log => log.id === logId);
+    if (index !== -1) {
+      logs[index].deleted = true;
+      logs[index].deletedAt = new Date().toISOString();
+      logs[index].updatedAt = new Date().toISOString();
+      storage.set(STORAGE_KEYS.DAILY_LOGS, logs);
+    }
   },
 
   getLogByDate(date) {
@@ -303,11 +318,19 @@ const data = {
 
   // Applications
   getApplications() {
+    const apps = storage.get(STORAGE_KEYS.APPLICATIONS) || [];
+    // Filter out soft-deleted applications for display
+    return apps.filter(app => !app.deleted);
+  },
+
+  // Get all applications including deleted (for sync purposes)
+  getAllApplications() {
     return storage.get(STORAGE_KEYS.APPLICATIONS) || [];
   },
 
   addApplication(app) {
-    const apps = this.getApplications();
+    // Use getAllApplications to preserve deleted items
+    const apps = this.getAllApplications();
     app.id = utils.generateId();
     app.lastUpdated = app.dateApplied;
     app.updatedAt = new Date().toISOString();
@@ -317,7 +340,8 @@ const data = {
   },
 
   updateApplication(appId, updatedApp) {
-    const apps = this.getApplications();
+    // Use getAllApplications to preserve deleted items
+    const apps = this.getAllApplications();
     const index = apps.findIndex(app => app.id === appId);
     if (index !== -1) {
       apps[index] = { ...apps[index], ...updatedApp, lastUpdated: utils.getTodayDate(), updatedAt: new Date().toISOString() };
@@ -328,9 +352,15 @@ const data = {
   },
 
   deleteApplication(appId) {
-    const apps = this.getApplications();
-    const filtered = apps.filter(app => app.id !== appId);
-    storage.set(STORAGE_KEYS.APPLICATIONS, filtered);
+    // Use soft delete for sync support
+    const apps = this.getAllApplications();
+    const index = apps.findIndex(app => app.id === appId);
+    if (index !== -1) {
+      apps[index].deleted = true;
+      apps[index].deletedAt = new Date().toISOString();
+      apps[index].updatedAt = new Date().toISOString();
+      storage.set(STORAGE_KEYS.APPLICATIONS, apps);
+    }
   },
 
   // Settings

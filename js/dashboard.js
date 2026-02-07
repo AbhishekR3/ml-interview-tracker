@@ -3,21 +3,9 @@
 // Check if user should see welcome screen
 window.addEventListener('DOMContentLoaded', async () => {
   await data.init();
-  if (!data.hasBeenWelcomed()) {
-    showWelcome();
-  }
   loadDashboard();
   setActiveNav('index.html');
 });
-
-function showWelcome() {
-  document.getElementById('welcomeScreen').classList.remove('hidden');
-}
-
-function closeWelcome() {
-  document.getElementById('welcomeScreen').classList.add('hidden');
-  data.setWelcomed();
-}
 
 function loadDashboard() {
   // Current date (PST timezone)

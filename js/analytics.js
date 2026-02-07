@@ -130,10 +130,8 @@ function loadBurnoutInsights() {
   }
 
   if (insights.length === 0) {
-    insights.push({
-      type: 'success',
-      message: '✓ Your practice patterns look healthy and sustainable. Keep up the great work!'
-    });
+    container.innerHTML = '';
+    return;
   }
 
   let html = '';

@@ -226,8 +226,9 @@ const supabaseSync = {
     document.body.appendChild(popup);
   },
 
-  // Get all syncable data from localStorage
+  // Get all syncable data from localStorage (including soft-deleted items for sync)
   getLocalData() {
+    // Use raw storage to get ALL items including deleted ones
     return {
       dailyLogs: storage.get(STORAGE_KEYS.DAILY_LOGS) || [],
       topics: storage.get(STORAGE_KEYS.TOPICS) || [],
@@ -286,6 +287,7 @@ const supabaseSync = {
 
   // Merge two arrays by ID, keeping the item with the newer updatedAt timestamp
   // Items that exist only in one array are included in the result
+  // Handles soft-deleted items: if an item is deleted with a newer timestamp, keep it deleted
   mergeArraysById(localArray, remoteArray) {
     const merged = new Map();
 
@@ -299,17 +301,19 @@ const supabaseSync = {
       const localItem = merged.get(remoteItem.id);
 
       if (!localItem) {
-        // Item only exists remotely - add it
+        // Item only exists remotely - add it (even if deleted, for sync purposes)
         merged.set(remoteItem.id, remoteItem);
       } else {
-        // Item exists in both - keep the newer one
+        // Item exists in both - keep the newer one based on updatedAt
         const localTime = new Date(localItem.updatedAt || 0).getTime();
         const remoteTime = new Date(remoteItem.updatedAt || 0).getTime();
 
         if (remoteTime > localTime) {
+          // Remote is newer - use remote (preserves deleted state if remote was deleted)
           merged.set(remoteItem.id, remoteItem);
         }
         // If local is newer or same, keep local (already in map)
+        // This preserves local deleted state if local deletion was more recent
       }
     }
 
@@ -493,12 +497,15 @@ const supabaseSync = {
         });
 
         // Check if merged data differs from local (need to reload UI)
-        const localLogsCount = localData.dailyLogs?.length || 0;
-        const mergedLogsCount = mergedData.dailyLogs?.length || 0;
-        const localAppsCount = localData.applications?.length || 0;
-        const mergedAppsCount = mergedData.applications?.length || 0;
+        // Compare visible (non-deleted) counts to detect deletion syncs
+        const countVisible = (arr) => (arr || []).filter(item => !item.deleted).length;
 
-        needsReload = (mergedLogsCount !== localLogsCount) || (mergedAppsCount !== localAppsCount);
+        const localLogsVisible = countVisible(localData.dailyLogs);
+        const mergedLogsVisible = countVisible(mergedData.dailyLogs);
+        const localAppsVisible = countVisible(localData.applications);
+        const mergedAppsVisible = countVisible(mergedData.applications);
+
+        needsReload = (mergedLogsVisible !== localLogsVisible) || (mergedAppsVisible !== localAppsVisible);
       }
 
       // Save merged data locally
