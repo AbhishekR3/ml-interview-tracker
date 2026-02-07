@@ -829,8 +829,17 @@ footer {
 }
 
 .sync-indicator.success {
-  background: rgba(16, 185, 129, 0.1);
-  color: var(--success);
+  background: var(--primary);
+  color: var(--white);
+}
+
+.sync-indicator.success:hover {
+  background: var(--primary-dark);
+}
+
+.sync-indicator.synced {
+  background: var(--success);
+  color: var(--white);
 }
 
 .sync-indicator.error {

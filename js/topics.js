@@ -223,6 +223,7 @@ function markAsCompleted(topicId) {
   const topic = topics.find(t => t.id === topicId);
   if (topic) {
     topic.completed = true;
+    topic.updatedAt = new Date().toISOString();
     storage.set(STORAGE_KEYS.TOPICS, topics);
     loadTopicsSummary();
     loadTopicsList();
@@ -235,6 +236,7 @@ function restoreTopic(topicId) {
   const topic = topics.find(t => t.id === topicId);
   if (topic) {
     topic.completed = false;
+    topic.updatedAt = new Date().toISOString();
     storage.set(STORAGE_KEYS.TOPICS, topics);
     loadTopicsSummary();
     loadTopicsList();

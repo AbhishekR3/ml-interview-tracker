@@ -92,7 +92,7 @@
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );</pre>
             </li>
-            <li>Click "Save & Sync" to enable automatic sync!</li>
+            <li>Click "Save & Sync" to enable sync! Use the "Sync Now" button in the header to sync manually.</li>
           </ol>
         </div>
       </details>
@@ -198,7 +198,7 @@
         statusCard.className = 'sync-status-card configured';
         icon.textContent = '✓';
         label.textContent = 'Configured';
-        message.textContent = 'Your data syncs automatically across devices';
+        message.textContent = 'Click "Sync Now" in the header to sync across devices';
         supabaseSync.updateSyncIndicator('success');
       } else {
         statusCard.className = 'sync-status-card not-configured';

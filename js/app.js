@@ -245,6 +245,7 @@ const data = {
   addDailyLog(log) {
     const logs = this.getDailyLogs();
     log.id = utils.generateId();
+    log.updatedAt = new Date().toISOString();
     logs.push(log);
     storage.set(STORAGE_KEYS.DAILY_LOGS, logs);
     return log;
@@ -254,7 +255,7 @@ const data = {
     const logs = this.getDailyLogs();
     const index = logs.findIndex(log => log.id === logId);
     if (index !== -1) {
-      logs[index] = { ...logs[index], ...updatedLog };
+      logs[index] = { ...logs[index], ...updatedLog, updatedAt: new Date().toISOString() };
       storage.set(STORAGE_KEYS.DAILY_LOGS, logs);
       return logs[index];
     }
@@ -283,6 +284,7 @@ const data = {
     if (topic) {
       topic.practiceCount++;
       topic.lastPracticed = utils.getTodayDate();
+      topic.updatedAt = new Date().toISOString();
       storage.set(STORAGE_KEYS.TOPICS, topics);
     }
   },
@@ -308,6 +310,7 @@ const data = {
     const apps = this.getApplications();
     app.id = utils.generateId();
     app.lastUpdated = app.dateApplied;
+    app.updatedAt = new Date().toISOString();
     apps.push(app);
     storage.set(STORAGE_KEYS.APPLICATIONS, apps);
     return app;
@@ -317,7 +320,7 @@ const data = {
     const apps = this.getApplications();
     const index = apps.findIndex(app => app.id === appId);
     if (index !== -1) {
-      apps[index] = { ...apps[index], ...updatedApp, lastUpdated: utils.getTodayDate() };
+      apps[index] = { ...apps[index], ...updatedApp, lastUpdated: utils.getTodayDate(), updatedAt: new Date().toISOString() };
       storage.set(STORAGE_KEYS.APPLICATIONS, apps);
       return apps[index];
     }

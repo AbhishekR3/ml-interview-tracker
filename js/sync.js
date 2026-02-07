@@ -1,4 +1,5 @@
 // Supabase Sync module for ML Interview Prep Tracker
+// Manual sync with smart merge - no auto-sync
 
 const supabaseSync = {
   // Configuration
@@ -7,7 +8,6 @@ const supabaseSync = {
   STORAGE_KEY_USER_ID: 'mltracker_supabase_user_id',
   STORAGE_KEY_LAST_MODIFIED: 'mltracker_last_modified',
   TABLE_NAME: 'user_data',
-  DEBOUNCE_MS: 2000,
 
   // Default credentials (auto-configured)
   DEFAULT_URL: 'https://mbmlnxpifjmzodzyqqog.supabase.co',
@@ -29,10 +29,8 @@ const supabaseSync = {
 
   // State
   _client: null,
-  _debounceTimer: null,
   _isSyncing: false,
   _lastSyncStatus: null,
-  _subscription: null,
   _userId: null,
 
   // Get Supabase URL from localStorage
@@ -138,13 +136,22 @@ const supabaseSync = {
         break;
       case 'success':
         indicator.classList.add('success');
+        iconEl.textContent = '↑↓';
+        textEl.textContent = 'Sync Now';
+        break;
+      case 'synced':
+        indicator.classList.add('synced');
         iconEl.textContent = '✓';
-        textEl.textContent = 'Synced';
+        textEl.textContent = 'Synced!';
+        // Revert to "Sync Now" after 3 seconds
+        setTimeout(() => {
+          this.updateSyncIndicator('success');
+        }, 3000);
         break;
       case 'error':
         indicator.classList.add('error');
         iconEl.textContent = '⚠';
-        textEl.textContent = message || 'Sync failed';
+        textEl.textContent = message || 'Retry Sync';
         break;
       case 'offline':
         indicator.classList.add('offline');
@@ -162,8 +169,8 @@ const supabaseSync = {
         textEl.textContent = 'Local only';
         break;
       default:
-        iconEl.textContent = '○';
-        textEl.textContent = '';
+        iconEl.textContent = '↑↓';
+        textEl.textContent = 'Sync Now';
     }
   },
 
@@ -240,17 +247,18 @@ const supabaseSync = {
     });
 
     // Use direct localStorage to bypass storage hook during sync
+    // IMPORTANT: Use STORAGE_KEYS constants to match app.js keys
     if (data.dailyLogs) {
-      localStorage.setItem('mltracker_daily_logs', JSON.stringify(data.dailyLogs));
+      localStorage.setItem(STORAGE_KEYS.DAILY_LOGS, JSON.stringify(data.dailyLogs));
     }
     if (data.topics) {
-      localStorage.setItem('mltracker_topics', JSON.stringify(data.topics));
+      localStorage.setItem(STORAGE_KEYS.TOPICS, JSON.stringify(data.topics));
     }
     if (data.applications) {
-      localStorage.setItem('mltracker_applications', JSON.stringify(data.applications));
+      localStorage.setItem(STORAGE_KEYS.APPLICATIONS, JSON.stringify(data.applications));
     }
     if (data.settings) {
-      localStorage.setItem('mltracker_settings', JSON.stringify(data.settings));
+      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(data.settings));
     }
     // Persist lastModified timestamp
     if (data.lastModified) {
@@ -259,9 +267,9 @@ const supabaseSync = {
 
     // Verify data was saved
     console.log('Data saved to localStorage. Verification:', {
-      dailyLogs: JSON.parse(localStorage.getItem('mltracker_daily_logs') || '[]').length,
-      topics: JSON.parse(localStorage.getItem('mltracker_topics') || '[]').length,
-      applications: JSON.parse(localStorage.getItem('mltracker_applications') || '[]').length,
+      dailyLogs: JSON.parse(localStorage.getItem(STORAGE_KEYS.DAILY_LOGS) || '[]').length,
+      topics: JSON.parse(localStorage.getItem(STORAGE_KEYS.TOPICS) || '[]').length,
+      applications: JSON.parse(localStorage.getItem(STORAGE_KEYS.APPLICATIONS) || '[]').length,
       lastModified: localStorage.getItem(this.STORAGE_KEY_LAST_MODIFIED)
     });
   },
@@ -274,6 +282,91 @@ const supabaseSync = {
   // Set lastModified timestamp
   setLastModified(timestamp) {
     localStorage.setItem(this.STORAGE_KEY_LAST_MODIFIED, timestamp);
+  },
+
+  // Merge two arrays by ID, keeping the item with the newer updatedAt timestamp
+  // Items that exist only in one array are included in the result
+  mergeArraysById(localArray, remoteArray) {
+    const merged = new Map();
+
+    // Add all local items
+    for (const item of (localArray || [])) {
+      merged.set(item.id, item);
+    }
+
+    // Merge remote items
+    for (const remoteItem of (remoteArray || [])) {
+      const localItem = merged.get(remoteItem.id);
+
+      if (!localItem) {
+        // Item only exists remotely - add it
+        merged.set(remoteItem.id, remoteItem);
+      } else {
+        // Item exists in both - keep the newer one
+        const localTime = new Date(localItem.updatedAt || 0).getTime();
+        const remoteTime = new Date(remoteItem.updatedAt || 0).getTime();
+
+        if (remoteTime > localTime) {
+          merged.set(remoteItem.id, remoteItem);
+        }
+        // If local is newer or same, keep local (already in map)
+      }
+    }
+
+    return Array.from(merged.values());
+  },
+
+  // Merge settings objects (simple shallow merge, local wins for conflicts)
+  mergeSettings(localSettings, remoteSettings) {
+    return { ...(remoteSettings || {}), ...(localSettings || {}) };
+  },
+
+  // Merge topics by category+name (unique identifier) instead of ID
+  // This handles the case where different devices generate different IDs for the same topic
+  mergeTopicsByName(localTopics, remoteTopics) {
+    const merged = new Map();
+
+    // Key function: category + name
+    const getKey = (topic) => `${topic.category}::${topic.name}`;
+
+    // Add all local topics
+    for (const topic of (localTopics || [])) {
+      merged.set(getKey(topic), topic);
+    }
+
+    // Merge remote topics
+    for (const remoteTopic of (remoteTopics || [])) {
+      const key = getKey(remoteTopic);
+      const localTopic = merged.get(key);
+
+      if (!localTopic) {
+        // Topic only exists remotely - add it
+        merged.set(key, remoteTopic);
+      } else {
+        // Topic exists in both - keep the one with more practice or newer update
+        const localTime = new Date(localTopic.updatedAt || 0).getTime();
+        const remoteTime = new Date(remoteTopic.updatedAt || 0).getTime();
+
+        // Prefer the one with actual practice data, or the newer one
+        if (remoteTopic.practiceCount > localTopic.practiceCount ||
+            (remoteTopic.practiceCount === localTopic.practiceCount && remoteTime > localTime)) {
+          merged.set(key, remoteTopic);
+        }
+      }
+    }
+
+    return Array.from(merged.values());
+  },
+
+  // Merge all data from local and remote
+  mergeData(localData, remoteData) {
+    return {
+      dailyLogs: this.mergeArraysById(localData.dailyLogs, remoteData.dailyLogs),
+      topics: this.mergeTopicsByName(localData.topics, remoteData.topics),
+      applications: this.mergeArraysById(localData.applications, remoteData.applications),
+      settings: this.mergeSettings(localData.settings, remoteData.settings),
+      lastModified: new Date().toISOString()
+    };
   },
 
   // Check if local data is empty or just defaults (no real user data)
@@ -356,8 +449,9 @@ const supabaseSync = {
     }
   },
 
-  // Pull data from Supabase and update local if newer
-  async pull() {
+  // Sync: Pull remote, merge with local, push merged result
+  // This is the main sync method - does pull-merge-push in one operation
+  async sync() {
     if (!this.isConfigured()) {
       this.updateSyncIndicator('not-configured');
       return false;
@@ -367,114 +461,73 @@ const supabaseSync = {
     this.updateSyncIndicator('syncing');
 
     try {
+      const localData = this.getLocalData();
       const result = await this.fetchFromSupabase();
 
+      let mergedData;
+      let needsReload = false;
+
       if (!result.exists) {
-        // No remote data yet - only push if local has meaningful data
-        if (this.isLocalDataEmpty()) {
-          console.log('No remote data and local is empty, nothing to sync');
-          this.updateSyncIndicator('success');
-          this.hideOfflineBanner();
-        } else {
-          console.log('No remote data found, pushing local data...');
-          await this.push();
-        }
+        // No remote data yet - just push local data
+        console.log('No remote data found, pushing local data...');
+        mergedData = { ...localData, lastModified: new Date().toISOString() };
+      } else {
+        const remoteData = result.data;
+
+        console.log('Sync - merging data:', {
+          localLogs: localData.dailyLogs?.length || 0,
+          remoteLogs: remoteData.dailyLogs?.length || 0,
+          localTopics: localData.topics?.length || 0,
+          remoteTopics: remoteData.topics?.length || 0,
+          localApps: localData.applications?.length || 0,
+          remoteApps: remoteData.applications?.length || 0
+        });
+
+        // Merge local and remote data
+        mergedData = this.mergeData(localData, remoteData);
+
+        console.log('Merged result:', {
+          logs: mergedData.dailyLogs?.length || 0,
+          topics: mergedData.topics?.length || 0,
+          apps: mergedData.applications?.length || 0
+        });
+
+        // Check if merged data differs from local (need to reload UI)
+        const localLogsCount = localData.dailyLogs?.length || 0;
+        const mergedLogsCount = mergedData.dailyLogs?.length || 0;
+        const localAppsCount = localData.applications?.length || 0;
+        const mergedAppsCount = mergedData.applications?.length || 0;
+
+        needsReload = (mergedLogsCount !== localLogsCount) || (mergedAppsCount !== localAppsCount);
+      }
+
+      // Save merged data locally
+      this.saveToLocal(mergedData);
+
+      // Push merged data to remote
+      await this.pushToSupabase(mergedData);
+      this.setLastModified(mergedData.lastModified);
+
+      // Show green "Synced!" indicator (will auto-revert to "Sync Now" after 3s)
+      this.updateSyncIndicator('synced');
+      this.hideOfflineBanner();
+
+      // Reload page if we got new data from remote
+      if (needsReload) {
+        console.log('New data merged, reloading page...');
+        await new Promise(resolve => setTimeout(resolve, 100));
+        window.location.reload();
         return true;
       }
 
-      const remoteData = result.data;
-      const localData = this.getLocalData();
-
-      // Compare timestamps
-      const remoteTime = new Date(remoteData.lastModified || 0).getTime();
-      const localTime = new Date(localData.lastModified || 0).getTime();
-
-      console.log('Sync comparison:', {
-        remoteTime: remoteData.lastModified,
-        localTime: localData.lastModified,
-        remoteMs: remoteTime,
-        localMs: localTime,
-        remoteLogs: remoteData.dailyLogs?.length || 0,
-        localLogs: localData.dailyLogs?.length || 0,
-        isLocalEmpty: this.isLocalDataEmpty()
-      });
-
-      // If local has no timestamp (new device), always pull remote
-      if (!localData.lastModified) {
-        console.log('Local has no timestamp (new device), pulling remote data...');
-        console.log('Remote data to save:', remoteData);
-        this.saveToLocal(remoteData);
-        this.updateSyncIndicator('success');
-        this.hideOfflineBanner();
-
-        // Small delay to ensure localStorage is written before reload (Safari fix)
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Trigger UI refresh
-        if (typeof refreshPage === 'function') {
-          refreshPage();
-        } else {
-          console.log('Reloading page after sync...');
-          window.location.reload();
-        }
-        return true; // Exit early since we're reloading
-      } else if (remoteTime > localTime) {
-        // Remote is newer, update local
-        console.log('Remote data is newer, updating local...');
-        console.log('Remote data to save:', remoteData);
-        this.saveToLocal(remoteData);
-        this.updateSyncIndicator('success');
-        this.hideOfflineBanner();
-
-        // Small delay to ensure localStorage is written before reload (Safari fix)
-        await new Promise(resolve => setTimeout(resolve, 100));
-
-        // Trigger UI refresh
-        if (typeof refreshPage === 'function') {
-          refreshPage();
-        } else {
-          console.log('Reloading page after sync...');
-          window.location.reload();
-        }
-        return true; // Exit early since we're reloading
-      } else if (localTime > remoteTime) {
-        // Local is newer - but only push if local has meaningful data
-        if (this.isLocalDataEmpty()) {
-          console.log('Local appears newer but is empty, pulling remote instead...');
-          console.log('Remote data to save:', remoteData);
-          this.saveToLocal(remoteData);
-          this.updateSyncIndicator('success');
-          this.hideOfflineBanner();
-
-          // Small delay to ensure localStorage is written before reload (Safari fix)
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-          if (typeof refreshPage === 'function') {
-            refreshPage();
-          } else {
-            console.log('Reloading page after sync...');
-            window.location.reload();
-          }
-          return true; // Exit early since we're reloading
-        } else {
-          console.log('Local data is newer, pushing to remote...');
-          await this.push();
-        }
-      } else {
-        // Same timestamp, already in sync
-        console.log('Data is in sync');
-        this.updateSyncIndicator('success');
-        this.hideOfflineBanner();
-      }
-
       return true;
     } catch (error) {
-      console.error('Pull failed:', error);
+      console.error('Sync failed:', error);
       this.updateSyncIndicator('error', 'Sync failed');
       this.showOfflineBanner(true, `Sync failed: ${error.message}`);
       this.showErrorPopup(
         'Sync Failed',
-        'Could not connect to Supabase cloud sync.',
+        'Could not sync with Supabase cloud.',
         `Error: ${error.message}\nCode: ${error.code || 'N/A'}\nDetails: ${error.details || error.hint || 'No additional details'}`
       );
       return false;
@@ -483,110 +536,12 @@ const supabaseSync = {
     }
   },
 
-  // Push local data to Supabase
-  async push() {
-    if (!this.isConfigured()) {
-      this.updateSyncIndicator('not-configured');
-      return false;
-    }
-
-    this._isSyncing = true;
-    this.updateSyncIndicator('syncing');
-
-    try {
-      const localData = this.getLocalData();
-      // Generate new timestamp for this push
-      const newTimestamp = new Date().toISOString();
-      localData.lastModified = newTimestamp;
-      await this.pushToSupabase(localData);
-      // Persist the timestamp locally after successful push
-      this.setLastModified(newTimestamp);
-      this.updateSyncIndicator('success');
-      this.hideOfflineBanner();
-      return true;
-    } catch (error) {
-      console.error('Push failed:', error);
-      this.updateSyncIndicator('error', 'Sync failed');
-      this.showOfflineBanner(true, `Sync failed: ${error.message}`);
-      this.showErrorPopup(
-        'Sync Failed',
-        'Could not push data to Supabase cloud.',
-        `Error: ${error.message}\nCode: ${error.code || 'N/A'}\nDetails: ${error.details || error.hint || 'No additional details'}`
-      );
-      return false;
-    } finally {
-      this._isSyncing = false;
-    }
-  },
-
-  // Debounced push - called after data changes
-  schedulePush() {
-    if (!this.isConfigured()) return;
-
-    // Clear existing timer
-    if (this._debounceTimer) {
-      clearTimeout(this._debounceTimer);
-    }
-
-    // Schedule new push
-    this._debounceTimer = setTimeout(() => {
-      this.push();
-    }, this.DEBOUNCE_MS);
-  },
-
-  // Set up real-time subscription
-  setupRealtimeSubscription() {
-    if (!this.isConfigured()) return;
-
-    const client = this.getClient();
-    if (!client) return;
-
-    const userId = this.getUserId();
-
-    // Unsubscribe from existing subscription
-    if (this._subscription) {
-      this._subscription.unsubscribe();
-    }
-
-    // Subscribe to changes for this user's data
-    this._subscription = client
-      .channel('user_data_changes')
-      .on('postgres_changes', {
-        event: '*',
-        schema: 'public',
-        table: this.TABLE_NAME,
-        filter: `user_id=eq.${userId}`
-      }, (payload) => {
-        console.log('Realtime update received:', payload);
-        // Only pull if we're not currently syncing (to avoid loops)
-        if (!this._isSyncing && payload.new && payload.new.data) {
-          const remoteData = payload.new.data;
-          const localData = this.getLocalData();
-
-          const remoteTime = new Date(remoteData.lastModified || 0).getTime();
-          const localTime = new Date(localData.lastModified || 0).getTime();
-
-          // If local has no timestamp or remote is newer, update local
-          if (!localData.lastModified || remoteTime > localTime) {
-            console.log('Realtime: Remote is newer, updating local...');
-            this.saveToLocal(remoteData);
-            this.updateSyncIndicator('success');
-
-            if (typeof refreshPage === 'function') {
-              refreshPage();
-            }
-          }
-        }
-      })
-      .subscribe();
-  },
-
-  // Manual sync trigger
+  // Manual sync trigger (called by Sync Now button)
   async manualSync() {
-    return await this.pull();
+    return await this.sync();
   },
 
-  // Initialize sync on page load
+  // Initialize sync on page load (no auto-sync, just update indicator)
   async init() {
     console.log('Sync init starting...');
 
@@ -599,33 +554,9 @@ const supabaseSync = {
       return;
     }
 
-    console.log('Sync configured, starting initial pull...');
-
-    // Initial pull
-    await this.pull();
-    console.log('Initial pull completed');
-
-    // Set up real-time subscription
-    this.setupRealtimeSubscription();
-
-    // Set up auto-push when storage changes
-    this._setupStorageHook();
-  },
-
-  // Hook into storage changes to auto-sync
-  _setupStorageHook() {
-    if (!this.isConfigured()) return;
-
-    // Override storage.set to trigger sync
-    const originalSet = storage.set;
-    storage.set = (key, value) => {
-      originalSet.call(storage, key, value);
-      // Schedule push for data keys, but NOT when we're syncing
-      // (to avoid pushing back data we just received from remote)
-      if (Object.values(STORAGE_KEYS).includes(key) && !supabaseSync._isSyncing) {
-        supabaseSync.schedulePush();
-      }
-    };
+    // Just show that sync is available - user must click "Sync Now" to sync
+    console.log('Sync configured, ready for manual sync');
+    this.updateSyncIndicator('success');
   },
 
   // Test connection to Supabase
