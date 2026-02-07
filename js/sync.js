@@ -232,14 +232,38 @@ const supabaseSync = {
 
   // Save remote data to localStorage
   saveToLocal(data) {
-    if (data.dailyLogs) storage.set(STORAGE_KEYS.DAILY_LOGS, data.dailyLogs);
-    if (data.topics) storage.set(STORAGE_KEYS.TOPICS, data.topics);
-    if (data.applications) storage.set(STORAGE_KEYS.APPLICATIONS, data.applications);
-    if (data.settings) storage.set(STORAGE_KEYS.SETTINGS, data.settings);
+    console.log('saveToLocal called with:', {
+      dailyLogs: data.dailyLogs?.length || 0,
+      topics: data.topics?.length || 0,
+      applications: data.applications?.length || 0,
+      lastModified: data.lastModified
+    });
+
+    // Use direct localStorage to bypass storage hook during sync
+    if (data.dailyLogs) {
+      localStorage.setItem('mltracker_daily_logs', JSON.stringify(data.dailyLogs));
+    }
+    if (data.topics) {
+      localStorage.setItem('mltracker_topics', JSON.stringify(data.topics));
+    }
+    if (data.applications) {
+      localStorage.setItem('mltracker_applications', JSON.stringify(data.applications));
+    }
+    if (data.settings) {
+      localStorage.setItem('mltracker_settings', JSON.stringify(data.settings));
+    }
     // Persist lastModified timestamp
     if (data.lastModified) {
       localStorage.setItem(this.STORAGE_KEY_LAST_MODIFIED, data.lastModified);
     }
+
+    // Verify data was saved
+    console.log('Data saved to localStorage. Verification:', {
+      dailyLogs: JSON.parse(localStorage.getItem('mltracker_daily_logs') || '[]').length,
+      topics: JSON.parse(localStorage.getItem('mltracker_topics') || '[]').length,
+      applications: JSON.parse(localStorage.getItem('mltracker_applications') || '[]').length,
+      lastModified: localStorage.getItem(this.STORAGE_KEY_LAST_MODIFIED)
+    });
   },
 
   // Get stored lastModified timestamp
@@ -291,6 +315,13 @@ const supabaseSync = {
         throw error;
       }
 
+      console.log('Fetched from Supabase:', {
+        exists: true,
+        dailyLogs: data.data?.dailyLogs?.length || 0,
+        topics: data.data?.topics?.length || 0,
+        applications: data.data?.applications?.length || 0,
+        lastModified: data.data?.lastModified
+      });
       return { exists: true, data: data.data };
     } catch (error) {
       console.error('Error fetching from Supabase:', error);
@@ -358,45 +389,73 @@ const supabaseSync = {
       const remoteTime = new Date(remoteData.lastModified || 0).getTime();
       const localTime = new Date(localData.lastModified || 0).getTime();
 
+      console.log('Sync comparison:', {
+        remoteTime: remoteData.lastModified,
+        localTime: localData.lastModified,
+        remoteMs: remoteTime,
+        localMs: localTime,
+        remoteLogs: remoteData.dailyLogs?.length || 0,
+        localLogs: localData.dailyLogs?.length || 0,
+        isLocalEmpty: this.isLocalDataEmpty()
+      });
+
       // If local has no timestamp (new device), always pull remote
       if (!localData.lastModified) {
         console.log('Local has no timestamp (new device), pulling remote data...');
+        console.log('Remote data to save:', remoteData);
         this.saveToLocal(remoteData);
         this.updateSyncIndicator('success');
         this.hideOfflineBanner();
+
+        // Small delay to ensure localStorage is written before reload (Safari fix)
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         // Trigger UI refresh
         if (typeof refreshPage === 'function') {
           refreshPage();
         } else {
+          console.log('Reloading page after sync...');
           window.location.reload();
         }
+        return true; // Exit early since we're reloading
       } else if (remoteTime > localTime) {
         // Remote is newer, update local
         console.log('Remote data is newer, updating local...');
+        console.log('Remote data to save:', remoteData);
         this.saveToLocal(remoteData);
         this.updateSyncIndicator('success');
         this.hideOfflineBanner();
+
+        // Small delay to ensure localStorage is written before reload (Safari fix)
+        await new Promise(resolve => setTimeout(resolve, 100));
 
         // Trigger UI refresh
         if (typeof refreshPage === 'function') {
           refreshPage();
         } else {
+          console.log('Reloading page after sync...');
           window.location.reload();
         }
+        return true; // Exit early since we're reloading
       } else if (localTime > remoteTime) {
         // Local is newer - but only push if local has meaningful data
         if (this.isLocalDataEmpty()) {
           console.log('Local appears newer but is empty, pulling remote instead...');
+          console.log('Remote data to save:', remoteData);
           this.saveToLocal(remoteData);
           this.updateSyncIndicator('success');
           this.hideOfflineBanner();
 
+          // Small delay to ensure localStorage is written before reload (Safari fix)
+          await new Promise(resolve => setTimeout(resolve, 100));
+
           if (typeof refreshPage === 'function') {
             refreshPage();
           } else {
+            console.log('Reloading page after sync...');
             window.location.reload();
           }
+          return true; // Exit early since we're reloading
         } else {
           console.log('Local data is newer, pushing to remote...');
           await this.push();
@@ -529,16 +588,22 @@ const supabaseSync = {
 
   // Initialize sync on page load
   async init() {
+    console.log('Sync init starting...');
+
     // Auto-configure with default credentials if not already set
     this.autoConfigureDefaults();
 
     if (!this.isConfigured()) {
+      console.log('Sync not configured');
       this.updateSyncIndicator('not-configured');
       return;
     }
 
+    console.log('Sync configured, starting initial pull...');
+
     // Initial pull
     await this.pull();
+    console.log('Initial pull completed');
 
     // Set up real-time subscription
     this.setupRealtimeSubscription();
