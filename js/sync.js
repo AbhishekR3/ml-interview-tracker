@@ -11,7 +11,7 @@ const supabaseSync = {
 
   // Default credentials (auto-configured)
   DEFAULT_URL: 'https://mbmlnxpifjmzodzyqqog.supabase.co',
-  DEFAULT_KEY: 'sb_publishable_NJwNAgMf-_ROZ-IN6LY3gg_OCjvFceL',
+  DEFAULT_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1ibWxueHBpZmptem9kenlxcW9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzAxNjczNzUsImV4cCI6MjA4NTc0MzM3NX0.-PyxwnRVD_Bfj-JtkvaxEnFbAFH3os9wO8Dto_cDldg',
   DEFAULT_USER_ID: 'user_1770184708555_2zl59zi3d',
 
   // Auto-configure with default credentials if not already set
@@ -535,14 +535,7 @@ const supabaseSync = {
   },
 
   // Set up real-time subscription
-  // Note: Disabled because custom API key doesn't support WebSocket realtime
-  // To enable, use a standard Supabase anon key (JWT format)
   setupRealtimeSubscription() {
-    // Realtime disabled - sync happens on page load and after data changes
-    console.log('Realtime subscription disabled (API key does not support WebSocket)');
-    return;
-
-    /* Original realtime code - uncomment if using standard anon key:
     if (!this.isConfigured()) return;
 
     const client = this.getClient();
@@ -586,7 +579,6 @@ const supabaseSync = {
         }
       })
       .subscribe();
-    */
   },
 
   // Manual sync trigger
