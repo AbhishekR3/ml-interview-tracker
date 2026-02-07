@@ -535,7 +535,14 @@ const supabaseSync = {
   },
 
   // Set up real-time subscription
+  // Note: Disabled because custom API key doesn't support WebSocket realtime
+  // To enable, use a standard Supabase anon key (JWT format)
   setupRealtimeSubscription() {
+    // Realtime disabled - sync happens on page load and after data changes
+    console.log('Realtime subscription disabled (API key does not support WebSocket)');
+    return;
+
+    /* Original realtime code - uncomment if using standard anon key:
     if (!this.isConfigured()) return;
 
     const client = this.getClient();
@@ -579,6 +586,7 @@ const supabaseSync = {
         }
       })
       .subscribe();
+    */
   },
 
   // Manual sync trigger
