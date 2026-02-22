@@ -93,7 +93,9 @@ function sortApplications() {
 }
 
 function loadApplicationsTable() {
-  const tbody = document.getElementById('applicationsBody');
+  const activeTbody = document.getElementById('applicationsBody');
+  const staleTbody = document.getElementById('staleApplicationsBody');
+  const staleCard = document.getElementById('staleApplicationsCard');
   let apps = data.getApplications();
 
   // Filter
@@ -112,18 +114,38 @@ function loadApplicationsTable() {
     apps.sort((a, b) => a.status.localeCompare(b.status));
   }
 
-  if (apps.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No applications found. Add your first application above!</td></tr>';
-    return;
+  const today = utils.getTodayDate();
+  const activeApps = apps.filter(app => utils.daysBetween(app.lastUpdated, today) < 14 && app.status !== 'Stale');
+  const staleApps = apps.filter(app => utils.daysBetween(app.lastUpdated, today) >= 14 || app.status === 'Stale');
+
+  // Auto-set status to "Stale" for outdated applications (without updating lastUpdated)
+  const staleIds = staleApps.filter(app => app.status !== 'Stale').map(app => app.id);
+  if (staleIds.length > 0) {
+    data.markApplicationsStale(staleIds);
+    staleApps.forEach(app => { app.status = 'Stale'; });
   }
 
-  const today = utils.getTodayDate();
+  // Render active applications
+  if (activeApps.length === 0) {
+    activeTbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No active applications found.</td></tr>';
+  } else {
+    activeTbody.innerHTML = renderApplicationRows(activeApps);
+  }
+
+  // Render stale applications
+  if (staleApps.length > 0) {
+    staleCard.style.display = '';
+    document.getElementById('staleCount').textContent = `(${staleApps.length})`;
+    staleTbody.innerHTML = renderApplicationRows(staleApps, true);
+  } else {
+    staleCard.style.display = 'none';
+  }
+}
+
+function renderApplicationRows(apps, isStale) {
   let html = '';
-
   apps.forEach(app => {
-    const isStale = utils.daysBetween(app.lastUpdated, today) >= 14;
     const rowClass = isStale ? 'row-warning' : '';
-
     html += `
       <tr class="${rowClass}">
         <td><strong>${app.company}</strong></td>
@@ -148,8 +170,14 @@ function loadApplicationsTable() {
       ` : ''}
     `;
   });
+  return html;
+}
 
-  tbody.innerHTML = html;
+let staleExpanded = false;
+function toggleStaleSection() {
+  staleExpanded = !staleExpanded;
+  document.getElementById('staleApplicationsContent').style.display = staleExpanded ? '' : 'none';
+  document.getElementById('staleToggleIcon').style.transform = staleExpanded ? 'rotate(90deg)' : '';
 }
 
 function getStatusBadge(status) {
@@ -157,7 +185,8 @@ function getStatusBadge(status) {
     'Applied': '#64748b',
     'Phone Screen': '#0d9488',
     'Technical Interview': '#2563eb',
-    'Onsite': '#7c3aed'
+    'Onsite': '#7c3aed',
+    'Stale': '#d97706'
   };
 
   const color = colors[status] || '#64748b';

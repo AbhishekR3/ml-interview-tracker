@@ -351,6 +351,15 @@ const data = {
     return null;
   },
 
+  markApplicationsStale(appIds) {
+    const apps = this.getAllApplications();
+    appIds.forEach(id => {
+      const app = apps.find(a => a.id === id);
+      if (app) app.status = 'Stale';
+    });
+    storage.set(STORAGE_KEYS.APPLICATIONS, apps);
+  },
+
   deleteApplication(appId) {
     // Use soft delete for sync support
     const apps = this.getAllApplications();

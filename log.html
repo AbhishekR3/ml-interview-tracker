@@ -52,6 +52,11 @@
           <label>Resources & Question Counts</label>
           <div class="checkbox-group">
             <div class="checkbox-item">
+              <input type="checkbox" id="useApplyingJobs" onchange="toggleResource('applyingJobs')">
+              <label for="useApplyingJobs" style="margin: 0;">Applying Jobs</label>
+              <input type="number" id="applyingJobs" min="0" value="0" placeholder="0" disabled>
+            </div>
+            <div class="checkbox-item">
               <input type="checkbox" id="useInterviewPrepPDF" onchange="toggleResource('interviewPrepPDF')">
               <label for="useInterviewPrepPDF" style="margin: 0;">Interview Prep PDF</label>
               <input type="number" id="interviewPrepPDF" min="0" value="0" placeholder="0" disabled>

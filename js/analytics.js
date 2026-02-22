@@ -268,6 +268,7 @@ function loadResourceChart() {
   const logs = getFilteredLogs();
 
   const resourceTotals = {
+    applyingJobs: 0,
     interviewPrepPDF: 0,
     stratascratch: 0,
     hackerrank: 0,
@@ -292,6 +293,7 @@ function loadResourceChart() {
   }
 
   const resourceNames = {
+    applyingJobs: 'Applying Jobs',
     interviewPrepPDF: 'Interview Prep PDF',
     stratascratch: 'Stratascratch',
     hackerrank: 'HackerRank',

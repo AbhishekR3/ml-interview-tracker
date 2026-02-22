@@ -129,6 +129,7 @@ function handleFormSubmit(e) {
     date: document.getElementById('logDate').value,
     minutesSpent: parseInt(document.getElementById('minutesSpent').value),
     resources: {
+      applyingJobs: parseInt(document.getElementById('applyingJobs').value) || 0,
       interviewPrepPDF: parseInt(document.getElementById('interviewPrepPDF').value) || 0,
       stratascratch: parseInt(document.getElementById('stratascratch').value) || 0,
       hackerrank: parseInt(document.getElementById('hackerrank').value) || 0,
@@ -165,7 +166,7 @@ function resetForm() {
   editingLogId = null;
 
   // Disable all resource inputs
-  ['interviewPrepPDF', 'stratascratch', 'hackerrank', 'leetcode', 'tryexponent', 'claudeQA'].forEach(resource => {
+  ['applyingJobs', 'interviewPrepPDF', 'stratascratch', 'hackerrank', 'leetcode', 'tryexponent', 'claudeQA'].forEach(resource => {
     document.getElementById(resource).disabled = true;
     document.getElementById(resource).value = 0;
   });
@@ -190,7 +191,10 @@ function loadLogHistory() {
 
   let html = '';
   sortedLogs.forEach(log => {
-    const totalQuestions = Object.values(log.resources).reduce((sum, count) => sum + count, 0);
+    const applyingJobs = (log.resources && log.resources.applyingJobs) || 0;
+    const questionResources = { ...log.resources };
+    delete questionResources.applyingJobs;
+    const totalQuestions = Object.values(questionResources).reduce((sum, count) => sum + count, 0);
     const goalMet = log.minutesSpent >= settings.dailyGoalMinutes;
     const topicNames = getTopicNames(log.topics);
 
@@ -205,8 +209,8 @@ function loadLogHistory() {
         </div>
         <div class="log-details">
           <strong>Time:</strong> ${utils.minutesToHours(log.minutesSpent)} ${goalMet ? '✓ Goal met!' : ''}<br>
-          <strong>Questions:</strong> ${totalQuestions} total
-          ${formatResourceBreakdown(log.resources)}<br>
+          ${totalQuestions > 0 ? `<strong>Questions:</strong> ${totalQuestions} total${formatResourceBreakdown(questionResources)}<br>` : ''}
+          ${applyingJobs > 0 ? `<strong>Applying Jobs:</strong> ${applyingJobs} total<br>` : ''}
           ${topicNames.length > 0 ? `<strong>Topics:</strong> ${topicNames.join(', ')}<br>` : ''}
           ${log.notes ? `<strong>Notes:</strong><div class="log-notes">${log.notes.replace(/\n/g, '<br>')}</div>` : ''}
         </div>
